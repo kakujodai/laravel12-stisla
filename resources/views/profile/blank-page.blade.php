@@ -27,7 +27,7 @@
             @foreach ($charts as $chart)
             <div class="col-md-6"> 
                 <div class="card">
-                    <div class="card-header">chart-{{$chart_count}}</div>
+                    <div class="card-header">{{str_replace('_', ' ', $chart_card_labels[$chart_count])}}</div>
                     <div id="chart-$chart_count" class="card-body">
                         <x-chartjs-component :chart="$chart" />
                     </div>

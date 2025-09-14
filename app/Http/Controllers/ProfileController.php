@@ -71,12 +71,11 @@ class ProfileController extends Controller
         foreach ($files as $file) {
             $read_file = Storage::get($file); //laravel's storage facade Storage::get($file)
             $json_version = json_decode($read_file, true);
-            #var_dump($json_version['name']);
-            #die;
+            $name = $json_version['name'];
             foreach ($json_version['features'] as $feature) {
                 foreach ($feature['properties'] as $key => $value) {
                     if (is_int($value)) {
-                        $geojson_chart_array[$key][] = $value;
+                        $geojson_chart_array[$name][$key][] = $value;
                     }
                 }
             }
@@ -88,44 +87,46 @@ class ProfileController extends Controller
         $line_charts = []; //array to hold line charts
         # Gen Labels
         $chart_card_labels = []; //label for each chart card
-        foreach ($geojson_chart_array as $key => $value)  {  //iterate over key value pairs in geojson_chart_array
-            $labels = []; //labels for x axis
-            for ($i = 0; $i < count($value); $i++) { //loop through number of values in each key
-                $labels[] = "Value$i"; //append ith value to labels array
+        foreach ($geojson_chart_array as $name => $geo_file) {
+            foreach ($geo_file as $key => $value)  {  //iterate over key value pairs in geojson_chart_array
+                $labels = []; //labels for x axis
+                for ($i = 0; $i < count($value); $i++) { //loop through number of values in each key
+                    $labels[] = "Value$i"; //append ith value to labels array
+                }
+                $chart_card_labels[] = $name."_".$key; //chart card label is the key name
+                $line_charts[] = Chartjs::build() //makes empty chart
+                    ->name($name."_".$key) //fill da chart!!!! with what we just did!!!!!!!
+                    ->type('line')
+                    ->size(['width' => 400, 'height' => 200]) 
+                    ->labels($labels)
+                    ->datasets([
+                        [
+                            "label" => $key,
+                            "data" => $value,
+                            "fill" => false, //calculus (y/n)
+                            "pointRadius" => 0,
+                            "borderWidth" => 1,
+                        ]
+                    ])
+                    ->options([
+                        "interaction" =>[
+                            "mode" => "nearest", // or 'index'
+                            "intersect" => false
+                        ],
+                        "hover" => [
+                            "mode" => "nearest", // or 'index'
+                            "intersect" => false
+                        ]
+                    ]);
+                    //->options([]);
+                    // ->options([
+                    //     "scales" => [
+                    //         "y" => [
+                    //             "beginAtZero" => true
+                    //             ]
+                    //         ]
+                    // ]);
             }
-            $chart_card_labels[] = $key; //chart card label is the key name
-            $line_charts[] = Chartjs::build() //makes empty chart
-                ->name($key) //fill da chart!!!! with what we just did!!!!!!!
-                ->type('line')
-                ->size(['width' => 400, 'height' => 200]) 
-                ->labels($labels)
-                ->datasets([
-                    [
-                        "label" => $key,
-                        "data" => $value,
-                        "fill" => false, //calculus (y/n)
-                        "pointRadius" => 0,
-                        "borderWidth" => 1,
-                    ]
-                ])
-                ->options([
-                    "interaction" =>[
-                        "mode" => "nearest", // or 'index'
-                        "intersect" => false
-                    ],
-                    "hover" => [
-                        "mode" => "nearest", // or 'index'
-                        "intersect" => false
-                    ]
-                ]);
-                //->options([]);
-                // ->options([
-                //     "scales" => [
-                //         "y" => [
-                //             "beginAtZero" => true
-                //             ]
-                //         ]
-                // ]);
         }
         $array = ['text'=> 'farts smell', 'maps' => $geojson_array, 'charts' => $line_charts, 'chart_card_labels' => $chart_card_labels];
         return view('profile.blank-page', $array);
