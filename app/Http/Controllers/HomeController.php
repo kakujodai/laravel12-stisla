@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+
 class HomeController extends Controller
 {
     /**
@@ -26,6 +27,6 @@ class HomeController extends Controller
 
     public function blank()
     {
-        return view('layouts.blank-page');
+        return view('blank');
     }
 }

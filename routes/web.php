@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\ProfileController;
 use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\FileUploadController;
 
 Route::get('/', function () {
     return view('welcome');
@@ -13,9 +14,11 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/home', [App\Http\Controllers\HomeController::class, 'index'])->name('home');
     Route::get('/profile/edit', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::put('/profile/update', [ProfileController::class, 'update'])->name('profile.update');
+    Route::get('/profile/upload', [ProfileController::class, 'show_files'])->name('profile.upload');
+    Route::post('/profile/upload', [FileUploadController::class, 'upload'])->name('profile.upload');
     Route::get('/profile/change-password', [ProfileController::class, 'changepassword'])->name('profile.change-password');
     Route::put('/profile/password', [ProfileController::class, 'password'])->name('profile.password');
-    Route::get('/blank-page', [App\Http\Controllers\HomeController::class, 'blank'])->name('blank');
+    Route::get('/blank-page', [App\Http\Controllers\ProfileController::class, 'blank'])->name('blank');
 
     Route::get('/hakakses', [App\Http\Controllers\HakaksesController::class, 'index'])->name('hakakses.index')->middleware('superadmin');
     Route::get('/hakakses/edit/{id}', [App\Http\Controllers\HakaksesController::class, 'edit'])->name('hakakses.edit')->middleware('superadmin');
@@ -34,4 +37,6 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/faq-example', [App\Http\Controllers\ExampleController::class, 'faq'])->name('faq.example');
     Route::get('/news-example', [App\Http\Controllers\ExampleController::class, 'news'])->name('news.example');
     Route::get('/about-example', [App\Http\Controllers\ExampleController::class, 'about'])->name('about.example');
+
+
 });

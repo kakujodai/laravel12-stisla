@@ -24,7 +24,10 @@
                 <a class="nav-link" href="{{ url('profile/edit') }}"><i class="far fa-user"></i> <span>Profile</span></a>
             </li>
             <li class="{{ Request::is('profile/change-password') ? 'active' : '' }}">
-                <a class="nav-link" href="{{ url('profile/change-password') }}"><i class="fas fa-key"></i> <span>Ganti Password</span></a>
+                <a class="nav-link" href="{{ url('profile/change-password') }}"><i class="fas fa-key"></i> <span>Change Password</span></a>
+            </li>
+            <li class="{{ Request::is('profile/upload') ? 'active' : '' }}">
+                <a class="nav-link" href="{{ url('profile/upload') }}"><i class="fas fa-upload"></i> <span>Upload File</span></a>
             </li>
             <li class="menu-header">Starter</li>
             <li class="{{ Request::is('blank-page') ? 'active' : '' }}">
