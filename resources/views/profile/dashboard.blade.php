@@ -17,23 +17,23 @@
         </div>
         <div class="row">
     	    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
-	    <script>
-	       const overlayMaps = {};
-               // Generate all geojson overlays
-	       @foreach ($all_geojsons as $each_geojson)
-	          var {{ pathinfo($each_geojson['filename'], PATHINFO_FILENAME); }} = L.geoJson({!! $each_geojson['geojson'] !!}, {
-			 onEachFeature: function (feature, layer) {
-			   layer.bindPopup('<pre>'+JSON.stringify(feature.properties,null,' ').replace(/[\{\}"]/g,'')+'</pre>');
-			 }
-		  });
-	          overlayMaps.{{ pathinfo($each_geojson['filename'], PATHINFO_FILENAME); }} = {{ pathinfo($each_geojson['filename'], PATHINFO_FILENAME); }};
-	       @endforeach
-            </script>
+			<script>
+				const overlayMaps = {};
+				// Generate all geojson overlays
+				@foreach ($all_geojsons as $each_geojson)
+					var {{ pathinfo($each_geojson['filename'], PATHINFO_FILENAME); }} = L.geoJson({!! $each_geojson['geojson'] !!}, {
+						onEachFeature: function (feature, layer) {
+							layer.bindPopup('<pre>'+JSON.stringify(feature.properties,null,' ').replace(/[\{\}"]/g,'')+'</pre>');
+						}
+					});
+					overlayMaps.{{ pathinfo($each_geojson['filename'], PATHINFO_FILENAME); }} = {{ pathinfo($each_geojson['filename'], PATHINFO_FILENAME); }};
+				@endforeach
+			</script>
             @foreach ($widgets as $widget)
-                @if ($widget['widget_type_id'] == 1)
+                @if ($widget['widget_type_id'] == 1) <!-- I'm the map, i'm the map (he's the map, he's the map) I'M THE MAP!-->
                 <div class="col-md-4">
                     <div class="card">
-                        <div class="card-header">{{$widget['name']}}</div>
+                        <div class="card-header flex-header">{{$widget['name']}}</div>
                         <div class="card-body">
 			    			<div id="{{ $widget['random_id'] }}" style="height:400px;"></div>
 							<script>

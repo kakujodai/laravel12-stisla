@@ -87,7 +87,7 @@ class DashboardController extends Controller
         return redirect()->route('profile.dashboard', ['id' => $id]);
     }
 
-    public function delete_widget($id, Request $request) {
-        
+    public function delete_widget(DashboardWidget $DashboardWidget) {
+        $DashboardWidget::delete();
     }
 }

@@ -20,7 +20,7 @@ Route::middleware(['auth'])->group(function () {
     Route::put('/profile/password', [ProfileController::class, 'password'])->name('profile.password');
     Route::get('/blank-page', [App\Http\Controllers\ProfileController::class, 'blank'])->name('blank');
     Route::post('/profile/add-dashboard', [App\Http\Controllers\ProfileController::class, 'add_dashboard']);
-    Route::get('/profile/add-dashboard', function () { return view('profile.add-dashboard');});
+    Route::get('/profile/add-dashboard', function () { return view('profile.add-dashboard');})->name('profile.add-dashboard');
     Route::get('/profile/dashboard/{id}', [App\Http\Controllers\DashboardController::class, 'show_dashboard'])->name('profile.dashboard');
     Route::get('/profile/add-widgets/{id}', [App\Http\Controllers\DashboardController::class, 'add_widgets'])->name('profile.add-widgets');
     Route::post('/profile/add-widgets/{id}', [App\Http\Controllers\DashboardController::class, 'add_widget']);
