@@ -1,7 +1,8 @@
 <?php
 
 namespace App\Http\Controllers;
-
+use App\Models\Dashboard;
+use Illuminate\Support\Facades\Auth;
 
 class HomeController extends Controller
 {
@@ -22,11 +23,12 @@ class HomeController extends Controller
      */
     public function index()
     {
-        return view('home');
+        $my_dashboards = Dashboard::where('user_id', '=', Auth::id())->get();
+        return view('home', ['dashboards' => $my_dashboards]);
     }
 
     public function blank()
     {
-        return view('blank');
+        return view('profile.blank-page');
     }
 }

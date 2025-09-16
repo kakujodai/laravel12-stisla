@@ -17,7 +17,6 @@
                 <div class="card">
                     <div class="card-header">{{ $map['filename'] }}</div>
                     <div class="card-body">
-                        <x-maps-leaflet :mapId="$map['id']" :geoJson="$map['json']"></x-maps-leaflet>
                     </div>
                 </div>
             </div>

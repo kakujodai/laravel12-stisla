@@ -10,7 +10,7 @@
         <ul class="sidebar-menu">
             <li class="menu-header">Dashboard</li>
             <li class="{{ Request::is('home') ? 'active' : '' }}">
-                <a class="nav-link" href="{{ url('home') }}"><i class="fas fa-fire"></i><span>Dashboard</span></a>
+                <a class="nav-link" href="{{ url('home') }}"><i class="fas fa-home"></i><span>Home</span></a>
             </li>
             @if (Auth::user()->role == 'superadmin')
             <li class="menu-header">Hak Akses</li>

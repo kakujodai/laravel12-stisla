@@ -9,6 +9,7 @@ use Illuminate\Support\Facades\Storage; //for storage::file()
 use Illuminate\Support\Str; //for Str::random()
 use App\Models\FileUpload;
 use IcehouseVentures\LaravelChartjs\Facades\Chartjs;
+use App\Models\Dashboard;
 
 
 class ProfileController extends Controller
@@ -59,6 +60,7 @@ class ProfileController extends Controller
         $my_files = FileUpload::where('user_id', '=', Auth::id())->get();
         return view('profile.upload', ['files' => $my_files]);
     }
+
 
     public function blank()
     {
@@ -130,6 +132,35 @@ class ProfileController extends Controller
         }
         $array = ['text'=> 'farts smell', 'maps' => $geojson_array, 'charts' => $line_charts, 'chart_card_labels' => $chart_card_labels];
         return view('profile.blank-page', $array);
+    }
+    
+    public function add_dashboard(Request $request)
+    {
+
+        //upload()
+        $request->validate([
+            'name' => [
+                'required',
+                #File::types(['gpkg', 'shp', 'geojson'])
+                #    ->max(50 * 1024), // Max 50MB
+            ],
+        ]);
+        $userId = auth()->id();
+        $dashboard = new Dashboard;
+        $dashboard->user_id = $userId;
+        $dashboard->name = $request->name;
+        $dashboard->save();
+        return redirect()->route('home');
+    }
+
+    public function get_file_metadata(Request $request) {
+        $filename = $request->filename;
+	$get_file = FileUpload::where('filename', '=', $filename)
+		->where('user_id', '=', Auth::id())
+		->get();
+	$metadata = json_decode($get_file->value('properties_metadata'), true);
+	$return_val = ['data' =>  $metadata];
+	return response()->json($metadata);
     }
     
 }

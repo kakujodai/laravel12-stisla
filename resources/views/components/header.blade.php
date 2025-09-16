@@ -3,7 +3,7 @@
 <nav class="navbar navbar-expand-lg main-navbar">
     <!-- Sidebar Toggle Button on the Left -->
     <a href="#" data-toggle="sidebar" class="nav-link nav-link-lg">
-        <i class="fas fa-bars"></i>
+        <i class="fas fa-bars mt-2"></i>
     </a>
 
     <!-- Right Side Navbar Items -->
@@ -17,7 +17,7 @@
             </a>
             <div class="dropdown-menu dropdown-menu-right">
                 <div class="dropdown-title">
-                    Selamat Datang, {{ substr(auth()->user()->name, 0, 10) }}
+                    Hello, {{ substr(auth()->user()->name, 0, 10) }}
                 </div>
                 <a class="dropdown-item has-icon edit-profile" href="{{ route('profile.edit') }}">
                     <i class="fa fa-user"></i> Edit Profile
