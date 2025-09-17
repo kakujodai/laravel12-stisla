@@ -33,7 +33,13 @@
                 @if ($widget['widget_type_id'] == 1) <!-- I'm the map, i'm the map (he's the map, he's the map) I'M THE MAP!-->
                 <div class="col-md-4">
                     <div class="card">
-                        <div class="card-header flex-header">{{$widget['name']}}</div>
+                        <div class="card-header flex-header">
+							{{$widget['name']}}
+							<form action="{{ route('profile.delete-widget', ['id' => $widget['id'], 'dash_id' => $dashboard_info['id']]) }}" method="POST" style="display: inline-block;">
+								@csrf
+								<button type="submit" class="btn btn-secondary rounded-1 fas fa-trash"></button>
+							</form>
+						</div>
                         <div class="card-body">
 			    			<div id="{{ $widget['random_id'] }}" style="height:400px;"></div>
 							<script>

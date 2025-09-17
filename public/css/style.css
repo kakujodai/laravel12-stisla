@@ -1892,6 +1892,12 @@ h6 .badge {
   z-index: -1;
 }
 
+.flex-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
 .navbar {
   align-items: center;
 }

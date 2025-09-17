@@ -32,29 +32,26 @@ class DashboardController extends Controller
                     }
                 }
             }
-	    $geojson_array[] = ['geojson' => $read_file, 'filename' => preg_replace('/[^A-Za-z0-9\_]/', '', basename($file))]; //$geojson_array[] = geojson_array.append()
-	}
-	#$geojson_array = $geojson_array[1];
-	# Get Generalized Dashboard
+	        $geojson_array[] = ['geojson' => $read_file, 'filename' => preg_replace('/[^A-Za-z0-9\_]/', '', basename($file))]; //$geojson_array[] = geojson_array.append()
+	    }
+	    # Get Generalized Dashboard
         $dashboard_info = Dashboard::where('user_id', '=', $userId)
             ->where('id', '=', $id)
             ->get(); // Get the widget with the right id, but ensure we don't open widgets that aren't ours by filtering by user id.
         $get_widgets = DashboardWidget::where('dashboard_id', '=', $id)
-	    ->get(); // Get widgets for this dashboard
+	        ->get(); // Get widgets for this dashboard
 
-	# Iterate Widgets
+	    # Iterate Widgets
         foreach ($get_widgets as $get_widget) {
             $decode_metadata = json_decode($get_widget['metadata'], true);
             if ($get_widget['widget_type_id'] == 1) {
                 $get_map_filename= $decode_metadata['map_filename'];
                 $get_widget['map_json'] = Storage::get("users/{$userId}/{$get_map_filename}");
-		$get_widget['random_id'] = Str::random();
-		$get_widget['filename'] = preg_replace('/[^A-Za-z0-9\_]/', '', basename($get_map_filename));
+		        $get_widget['random_id'] = Str::random();
+		        $get_widget['filename'] = preg_replace('/[^A-Za-z0-9\_]/', '', basename($get_map_filename));
             }
         }
-	$get_widget_types = DashboardWidgetType::get(); // Get all widget types
-
-
+	    $get_widget_types = DashboardWidgetType::get(); // Get all widget types
         $array = ['dashboard_info' => $dashboard_info[0], 'widgets' => $get_widgets, 'widget_types' => $get_widget_types, 'all_geojsons' => $geojson_array];
 
         return view('profile.dashboard', $array);
@@ -87,7 +84,9 @@ class DashboardController extends Controller
         return redirect()->route('profile.dashboard', ['id' => $id]);
     }
 
-    public function delete_widget(DashboardWidget $DashboardWidget) {
-        $DashboardWidget::delete();
+    public function delete_widget(Request $request) {
+        $del_id = DashboardWidget::where('user_id', '=', Auth::id())->where('id', '=', $request->id);
+        $del_id->delete();
+        return redirect()->route('profile.dashboard', ['id' => $request->dash_id]);
     }
 }
