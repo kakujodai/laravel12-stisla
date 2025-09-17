@@ -13,8 +13,7 @@
                                     <tr>
                                         <th>Title</th>
                                         <th>Filename</th>
-					<th>Chart Metadata</th>
-                                        <th>Md5</th>
+                                        <th>Files Hash</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -22,7 +21,6 @@
                                     <tr>
                                         <td>{{$file['title']}}</td>
                                         <td>{{$file['filename']}}</td>
-					<td>{{$file['properties_metadata']}}</td>
                                         <td>{{$file['md5']}}</td>
                                     </tr>
                                     @endforeach

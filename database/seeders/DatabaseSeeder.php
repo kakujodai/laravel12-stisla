@@ -3,6 +3,7 @@
 namespace Database\Seeders;
 
 use App\Models\User;
+use App\Models\DashboardWidgetType;
 // use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
 
@@ -13,11 +14,12 @@ class DatabaseSeeder extends Seeder
      */
     public function run(): void
     {
-        // User::factory(10)->create();
-
-        User::factory()->create([
-            'name' => 'Test User',
-            'email' => 'test@example.com',
-        ]);
+        $records = [
+            ['name' => 'Map',],
+            ['name' => 'Line Chart',],
+            ['name' => 'Bar Chart',],
+            ['name' => 'Pie Chart',],
+        ];
+        DashboardWidgetType::insert($records);
     }
 }
