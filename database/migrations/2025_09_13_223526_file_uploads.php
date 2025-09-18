@@ -12,10 +12,10 @@ return new class extends Migration
             $table->id();
             $table->string('user_id');
             $table->string('title');
-	    $table->string('filename');
-	    $table->json('geojson');
-	    $table->string('md5');
-	    $table->json('properties_metadata');
+            $table->string('filename');
+            $table->json('geojson');
+            $table->string('md5');
+            $table->json('properties_metadata');
             $table->timestamps();
         });
     }

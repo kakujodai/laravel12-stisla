@@ -20,7 +20,7 @@
                         @csrf
                         <div class="form-group">
                             <label for="widget_name">Enter a widget name</label>
-                            <input class="form-control mb-2" type="text" id="widget_name" name="widget_name"/>
+                            <input class="form-control mb-2" type="text" id="widget_name" name="widget_name" placeholder="Leave blank to use the geojson title"/>
                             <label for="widget_type">Select a widget type</label>
                             <select class="form-control mb-2" type="select" id="widget_type" name="widget_type">
                                 @foreach ($widget_types as $widget_type)
@@ -30,7 +30,7 @@
                             <label for="map_filename">Select a geojson file</label>
                             <select class="form-control mb-2" type="select" id="map_filename" name="map_filename">
                                 @foreach ($files as $file)
-                                <option value="{{ $file['filename'] }}">{{ $file['filename'] }}</option>
+                                <option value="{{ $file['filename'] }}">{{ $file['title'] }}</option>
                                 @endforeach
                             </select>
 			    <div id="chart_forms" class="form-group" style='display:none;'>

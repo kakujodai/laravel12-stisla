@@ -5,29 +5,29 @@
     <div class="row justify-content-center">
         <div class="col-md-8">
             <div class="card">
-                    <div class="card-header">{{ __('My Uploaded Files') }}</div>
-                    <div class="card-body">
-                        <div class="table-responsive">
-                            <table class="table table-striped">
-                                <thead>
-                                    <tr>
-                                        <th>Title</th>
-                                        <th>Filename</th>
-                                        <th>Files Hash</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    @foreach ($files as $file)
-                                    <tr>
-                                        <td>{{$file['title']}}</td>
-                                        <td>{{$file['filename']}}</td>
-                                        <td>{{$file['md5']}}</td>
-                                    </tr>
-                                    @endforeach
-                                </tbody>
-                            </table>
-                        </div>
+                <div class="card-header">{{ __('My Uploaded Files') }}</div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-striped">
+                            <thead>
+                                <tr>
+                                    <th>Title</th>
+                                    <th>Filename</th>
+                                    <th>Files Hash</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach ($files as $file)
+                                <tr>
+                                    <td>{{$file['title']}}</td>
+                                    <td>{{$file['filename']}}</td>
+                                    <td>{{$file['md5']}}</td>
+                                </tr>
+                                @endforeach
+                            </tbody>
+                        </table>
                     </div>
+                </div>
             </div>
         </div>
         <div class="col-md-4">

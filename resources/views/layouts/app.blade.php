@@ -28,7 +28,7 @@
     <!-- Additional CSS (if any) -->
     @stack('css')
 </head>
-<body>
+<body class="sidebar-mini">
     <div id="app">
         <div class="main-wrapper">
             <!-- Header -->

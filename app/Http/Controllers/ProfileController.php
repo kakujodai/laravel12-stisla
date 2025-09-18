@@ -57,7 +57,7 @@ class ProfileController extends Controller
     }
 
     public function show_files() {
-        $my_files = FileUpload::where('user_id', '=', Auth::id())->get();
+        $my_files = FileUpload::select('title', 'filename', 'md5', 'properties_metadata')->where('user_id', '=', Auth::id())->get();
         return view('profile.upload', ['files' => $my_files]);
     }
 
@@ -141,8 +141,6 @@ class ProfileController extends Controller
         $request->validate([
             'name' => [
                 'required',
-                #File::types(['gpkg', 'shp', 'geojson'])
-                #    ->max(50 * 1024), // Max 50MB
             ],
         ]);
         $userId = auth()->id();
@@ -155,12 +153,12 @@ class ProfileController extends Controller
 
     public function get_file_metadata(Request $request) {
         $filename = $request->filename;
-	$get_file = FileUpload::where('filename', '=', $filename)
-		->where('user_id', '=', Auth::id())
-		->get();
-	$metadata = json_decode($get_file->value('properties_metadata'), true);
-	$return_val = ['data' =>  $metadata];
-	return response()->json($metadata);
+	    $get_file = FileUpload::where('filename', '=', $filename)
+		    ->where('user_id', '=', Auth::id())
+		    ->get();
+	    $metadata = json_decode($get_file->value('properties_metadata'), true);
+	    $return_val = ['data' =>  $metadata];
+	    return response()->json($metadata);
     }
     
 }
