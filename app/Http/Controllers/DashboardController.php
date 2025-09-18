@@ -19,7 +19,6 @@ class DashboardController extends Controller
 	    ob_start('ob_gzhandler'); // Enable compression to the browser
 	    $userId = Auth::id();
         # Get all files
-        $path = "users/{$userId}";
         $my_files = FileUpload::select('filename')->where('user_id', '=', $userId)->get();
         $geojson_array = [];
         $geojson_chart_array = [];
@@ -36,6 +35,9 @@ class DashboardController extends Controller
 
 	    # Iterate Widgets
         foreach ($get_widgets as $get_widget) {
+            #var_dump($get_widget);
+
+            #die;
             $chart = [];
             $values = [];
             $values_md = [];
@@ -47,8 +49,7 @@ class DashboardController extends Controller
                 $get_widget['map_json'] = Storage::get("users/{$userId}/{$get_map_filename}");
 		        $get_widget['random_id'] = Str::random();
 		        $get_widget['filename'] = preg_replace('/[^A-Za-z0-9\_\.]/', '', basename($get_map_filename));
-            } else { # Handle Charts
-                #continue; # For now while we're working on it, just skip the code below
+            } elseif ($get_widget['widget_type_id'] > 1 && $get_widget['widget_type_id'] <= 4) { # Handle Charts
                 $values = [];
                 $geojson = FileUpload::select('geojson')
                     ->where('filename', '=', $get_map_filename)
@@ -65,21 +66,33 @@ class DashboardController extends Controller
                         }
                     }
                     $labels = array_keys($values_md);
+                    if ($get_widget['widget_type_id'] == 4) { # Piecharts don't like labels to be numberical, so convert them all
+                        $labels = array_map(function($value) {
+                            return (string)$value;
+                        }, $labels);
+                    }
                     $values = array_values($values_md);
+
                 } else { # Handle Sum
+
                     foreach ($json_version['features'] as $feature) {
                         if (!isset($values_md[$feature['properties'][$decode_metadata['x_axis']]])) {
                             $values_md[$feature['properties'][$decode_metadata['x_axis']]] = $feature['properties'][$decode_metadata['y_axis']];
                         } else {
                             $values_md[$feature['properties'][$decode_metadata['x_axis']]] = $values_md[$feature['properties'][$decode_metadata['x_axis']]] + $feature['properties'][$decode_metadata['y_axis']];
                         }
-                        #$values[] = $feature['properties'][$decode_metadata['y_axis']];
-                        #$labels[] = $feature['properties'][$decode_metadata['x_axis']];
                     }
                     $labels = array_keys($values_md);
                     $values = array_values($values_md);
+
                 }
-                $chart_types = [2 => 'line', 3 => 'bar', 4 => 'pie']; # TODO: Add the chart value name to the database as a column instead of this
+
+                $chart_types = [2 => 'line', 3 => 'bar', 4 => 'pie', 5 => 'table']; # TODO: Add the chart value name to the database as a column instead of this
+                if ($get_widget['widget_type_id'] == 4) { # Show pie stuff on the right. Else above
+                    $label_location = 'right';
+                } else {
+                    $label_location = 'top';
+                }
 
                 $chart = Chartjs::build() //makes empty chart
                     ->name("Chart".Str::random()) //fill da chart!!!! with what we just did!!!!!!!
@@ -88,9 +101,9 @@ class DashboardController extends Controller
                     ->labels($labels)
                     ->datasets([
                         [
-                            "label" => '',
+                            "label" => $decode_metadata['x_axis'],
                             "data" => $values,
-                            "fill" => false, //calculus (y/n)
+                            "fill" => true, //calculus (y/n)
                             "pointRadius" => 0,
                             "borderWidth" => 1,
                         ]
@@ -106,9 +119,11 @@ class DashboardController extends Controller
                         ],
                         "plugins" => [
                             "legend" => [
-                                "position" => "bottom",
+                                "position" => $label_location,
                             ]
-                        ]
+                        ],
+                        "responsive" => true,
+                        "maintainAspectRatio" => false, // This is true by default
                     ]);
                     //->options([]);
                     // ->options([
@@ -146,7 +161,8 @@ class DashboardController extends Controller
             'map_filename' => ['required'],
         ]);
         if (!$request->widget_name) { # Did we not get a name? We should use the file Title
-            $get_filename_title = FileUpload::where('user_id', '=', Auth::id())
+            $get_filename_title = FileUpload::select('title')
+                ->where('user_id', '=', Auth::id())
                 ->where('filename', '=', $request->map_filename)
                 ->get();
             if ($request->widget_type > 1) { # Give our own name for the widget if they leave it blank
@@ -183,6 +199,7 @@ class DashboardController extends Controller
     }
 
     public function get_geojson($filename) {
+        ini_set('memory_limit', -1); # Tell laravel not to be greedy with memory.. GIVE IT ALL TO ME!!!
 	    ob_start('ob_gzhandler');
 	    $real_filename = $filename.".geojson";
 	    $getfiles = FileUpload::select('geojson')

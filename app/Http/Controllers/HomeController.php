@@ -2,7 +2,9 @@
 
 namespace App\Http\Controllers;
 use App\Models\Dashboard;
+use App\Models\DashboardWidget;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 
 class HomeController extends Controller
 {
@@ -24,7 +26,15 @@ class HomeController extends Controller
     public function index()
     {
         $my_dashboards = Dashboard::where('user_id', '=', Auth::id())->get();
-        return view('home', ['dashboards' => $my_dashboards]);
+        $get_widgets = DashboardWidget::select('dashboard_id', DB::raw('count(*) as d_count'))
+            ->where('user_id', '=', Auth::id())
+            ->groupBy('dashboard_id')
+            ->get();
+        $widget_counts = [];
+        foreach($get_widgets as $widget) {
+            $widget_counts[$widget['dashboard_id']] = $widget['d_count'];
+        }
+        return view('home', ['dashboards' => $my_dashboards, 'widget_counts' => $widget_counts]);
     }
 
     public function blank()

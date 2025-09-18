@@ -4,13 +4,15 @@
 
 @push('css')
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
+	<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/jqueryui/1.13.2/themes/base/jquery-ui.min.css" integrity="sha512-ELV+xyi8IhEApPS/pSj66+Jiw+sOT1Mqkzlh8ExXihe4zfqbWkxPRi8wptXIO9g73FSlhmquFlUOuMSoXz5IRw==" crossorigin="anonymous" referrerpolicy="no-referrer" />
 
     <!-- CSS Libraries -->
 @endpush
 
 @section('content')
 	<div class="row mb-3">
-		<div class="col-md-12">
+		<div class="col-md-12 flex-header">
+			<h3>{{ $dashboard_info['name'] }}</h3>
 			<a href="{{ route('profile.add-widgets', ['id' => $dashboard_info['id']]) }}" class="btn btn-primary float-right">Add Widget</a>
 		</div>
 	</div>
@@ -47,8 +49,8 @@
 								<button type="submit" class="btn btn-secondary rounded-sm fas fa-trash"></button>
 							</form>
 						</div>
-                        <div class="card-body">
-			    			<div class="no-sort" id="{{ $widget['random_id'] }}" style="height:400px;"></div>
+                        <div class="card-body" style="height:400px;">
+			    			<div class="no-sort" id="{{ $widget['random_id'] }}" style="height:100%;"></div>
 							<script>
 								const overlayMaps{{ $widget['random_id'] }} = {};
 								// Generate all geojson overlays
@@ -98,7 +100,10 @@
 									zoom: 14,
 									layers: [osm, {{ str_replace('-', '', pathinfo($widget['filename'], PATHINFO_FILENAME)); }}{{ $widget['random_id'] }}]
 								});
-
+								const resizeObserver{{ $widget['random_id'] }} = new ResizeObserver(() => {
+									map{{ $widget['random_id'] }}.invalidateSize();
+								});
+								resizeObserver{{ $widget['random_id'] }}.observe(document.getElementById("{{ $widget['random_id'] }}"));
 								// Create the layers for display in the interface (top right icon)
 								var layerControl = L.control.layers(baseMaps, overlayMaps{{ $widget['random_id'] }}).addTo(map{{ $widget['random_id'] }});	
 								L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
@@ -141,34 +146,11 @@
 										});
 								}
 							</script>
-							<script>
-								// That sweet sweet moving cards trick
-								document.addEventListener("DOMContentLoaded", function() {
-									$(".card").draggable({
-										addClasses: false,
-										cursor: "grabbing", // Change the cursor to the move symbol
-										stack: ".card", // What items to change z-index on so they don't interact
-										containment: "#none_shall_pass", // Make sure you can't put the card outside of this div
-										cancel: ".no-sort", // Make sure we don't attempt to move the card when we're actually in the map panning
-										stop: function(event, ui) {
-											var positions = JSON.parse(localStorage.positions || "{}");
-											positions[this.id] = ui.position; // Store by element ID
-											localStorage.positions = JSON.stringify(positions);
-										}
-									});
-									var sPositions = localStorage.positions || "{}";
-    								var positions = JSON.parse(sPositions);
-									// If using localStorage
-									$.each(positions, function(id, pos) {
-										$("#" + id).css(pos);
-									});
-								});
-							</script>
                         </div>
                     </div>
                 </div>
 				@else
-					@if ($widget['widget_type_id'] == 4)
+					@if ($widget['widget_type_id'] == 4) <!-- I'm a wide chart -->
 					<div class="col-md-3">
 					@else
 					<div class="col-md-6">
@@ -182,8 +164,12 @@
 								</form>
 							</div>
 							<div class="card-body">
-								<div class="no-sort">
+								<div class="no-sort" style="height: 100%; width: 100%;">
+									@if (!$widget['chart'])
+										<b>Failed to produce results with selected parameters.</b>
+									@else
 									<x-chartjs-component :chart="$widget['chart']" />
+									@endif
 								</div>
 							</div>
 						</div>
@@ -192,6 +178,37 @@
             @endforeach
         </div>
     </div>
+	<script>
+		// That sweet sweet moving cards trick
+		document.addEventListener("DOMContentLoaded", function() {
+			$(".card").draggable({
+				addClasses: false,
+				cursor: "grabbing", // Change the cursor to the move symbol
+				stack: ".card", // What items to change z-index on so they don't interact
+				containment: "#none_shall_pass", // Make sure you can't put the card outside of this div
+				cancel: ".no-sort", // Make sure we don't attempt to move the card when we're actually in the map panning
+				stop: function(event, ui) {
+					var positions = JSON.parse(localStorage.positions || "{}");
+					positions[this.id] = ui.position; // Store by element ID
+					localStorage.positions = JSON.stringify(positions);
+				}
+			}).resizable({
+				stop: function(event, ui) {
+					var positions = JSON.parse(localStorage.positions || "{}");
+					positions[this.id] = ui.position; // Store by element ID
+					positions[this.id].width = ui.size.width;
+					positions[this.id].height = ui.size.height;
+					localStorage.positions = JSON.stringify(positions);
+				}
+			});
+			var sPositions = localStorage.positions || "{}";
+			var positions = JSON.parse(sPositions);
+			// If using localStorage
+			$.each(positions, function(id, pos) {
+				$("#" + id).css(pos);
+			});
+		});
+	</script>
 @endsection
 
 @push('scripts')

@@ -29,6 +29,7 @@
             <li class="{{ Request::is('profile/upload') ? 'active' : '' }}">
                 <a class="nav-link" href="{{ url('profile/upload') }}"><i class="fas fa-upload"></i> <span>Upload File</span></a>
             </li>
+            @if (Auth::user()->role == 'superadmin')
             <li class="menu-header">Starter</li>
             <li class="{{ Request::is('blank-page') ? 'active' : '' }}">
                 <a class="nav-link" href="{{ url('blank-page') }}"><i class="far fa-square"></i> <span>Blank Page</span></a>
@@ -70,6 +71,7 @@
             <li class="{{ Request::is('about-example') ? 'active' : '' }}">
                 <a class="nav-link" href="{{ url('about-example') }}"><i class="fas fa-info-circle"></i> <span>About Example</span></a>
             </li>
+            @endif
         </ul>
     </aside>
 </div>

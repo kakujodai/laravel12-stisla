@@ -45,14 +45,14 @@ class ProfileController extends Controller
         $user = Auth::user();
 
         if (! Hash::check($request->current_password, $user->password)) {
-            return back()->withErrors(['current_password' => 'Password Sebelumnya Salah!']);
+            return back()->withErrors(['current_password' => 'Incorrect Password!']);
         }
 
         $user->fill([
             'password' => Hash::make($request->new_password),
         ])->save();
 
-        return back()->with('status', 'Password berhasil Diubah!');
+        return back()->with('status', 'Password Successfully Changed!');
 
     }
 
@@ -148,7 +148,8 @@ class ProfileController extends Controller
         $dashboard->user_id = $userId;
         $dashboard->name = $request->name;
         $dashboard->save();
-        return redirect()->route('home');
+        
+        return redirect()->route('profile.dashboard', ['id' => $dashboard->id]); # Get the new dashboard id we made and go there.
     }
 
     public function get_file_metadata(Request $request) {

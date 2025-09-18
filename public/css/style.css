@@ -740,8 +740,8 @@ select.form-control:not([size]):not([multiple]) {
   position: static;
 }
 .card .card-body {
-  padding-top: 20px;
-  padding-bottom: 20px;
+  padding-top: 15px;
+  padding-bottom: 15px;
 }
 .card .card-body .section-title {
   margin: 30px 0 10px 0;

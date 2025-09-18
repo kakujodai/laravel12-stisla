@@ -734,14 +734,14 @@ select.form-control:not([size]):not([multiple]) {
 }
 .card .card-header, .card .card-body, .card .card-footer {
   background-color: transparent;
-  padding: 20px 25px;
+  padding: 10px 15px;
 }
 .card .navbar {
   position: static;
 }
 .card .card-body {
-  padding-top: 20px;
-  padding-bottom: 20px;
+  padding-top: 15px;
+  padding-bottom: 15px;
 }
 .card .card-body .section-title {
   margin: 30px 0 10px 0;

@@ -19,6 +19,7 @@ class DatabaseSeeder extends Seeder
             ['name' => 'Line Chart',],
             ['name' => 'Bar Chart',],
             ['name' => 'Pie Chart',],
+            ['name' => 'Table',],
         ];
         DashboardWidgetType::insert($records);
     }

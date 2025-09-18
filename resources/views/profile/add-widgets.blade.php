@@ -33,14 +33,16 @@
                                 <option value="{{ $file['filename'] }}">{{ $file['title'] }}</option>
                                 @endforeach
                             </select>
-			    <div id="chart_forms" class="form-group" style='display:none;'>
+			                <div id="chart_forms" class="form-group" style='display:none;'>
                                 <label for="x_axis">Select the property you want to use on the x axis.</label>
-     			        <select class="form-control mb-2" type="select" id="x_axis" name="x_axis">
-  			        </select>
+     			                <select class="form-control mb-2" type="select" id="x_axis" name="x_axis">
+                                    <option value="">Loading..</option>
+  			                    </select>
                                 <label for="y_axis">Select the property you want to use on the y axis.</label>
-			        <select class="form-control mb-2" type="select" id="y_axis" name="y_axis">
-			        </select>
-			    </div>
+			                    <select class="form-control mb-2" type="select" id="y_axis" name="y_axis">
+                                    <option value="">Loading..</option>
+			                    </select>
+			                </div>
                             <button class="btn btn-primary" type="submit">Submit</button>
                         </div>
                     </form>
@@ -52,46 +54,49 @@
 @endsection
 @push('scripts')
 <script>
-$(document).ready(function() {
-  $.ajaxSetup({
+$(document).ready(function() { //  Has the DOM loaded?
+    $.ajaxSetup({
       headers: {
-          'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
-      }
-  });
-  function update_axis_select(filename) {
+            'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content') // Get the token from the pages header so we can submit forms/ajax
+        }
+    });
+    function update_axis_select(filename) {
         $.ajax({
            type: 'POST',
            url: '/profile/get-file-metadata',
            data: { 'filename': filename },
            success: function(response) {
-	     $("#x_axis").empty(); // Nuke the current select options
-             $("#y_axis").empty(); // Nuke the current select options
-             $.each(response.x_axis, function(key, value) {
-                 $('#x_axis').append('<option value="' + value + '">' + value + '</option>');
-             });
-             $('#y_axis').append('<option value="COUNT">COUNT</option>');
-             $.each(response.y_axis, function(key, value) {
-                 $('#y_axis').append('<option value="' + value + '">SUM ' + value + '</option>');
-             });
-	   },
-           error: function(error) {
-             console.error(error);
-           }
+	            $("#x_axis").empty(); // Nuke the current select options
+                $("#y_axis").empty(); // Nuke the current select options
+                // Iterate x axis options
+                $.each(response.x_axis, function(key, value) {
+                    $('#x_axis').append('<option value="' + value + '">' + value + '</option>');
+                });
+                // Iterate y axis options
+                $('#y_axis').append('<option value="COUNT">COUNT</option>');
+                $.each(response.y_axis, function(key, value) {
+                    $('#y_axis').append('<option value="' + value + '">SUM ' + value + '</option>');
+                });
+	        },
+            error: function(error) {
+                console.error(error);
+            }
         }); 
-  }
-  $('#widget_type').change(function() {
-    if ($(this).val() != 1) { // if the value changes from map to a chart widget, show x and y axis forms
-        $("#chart_forms").show("slow");
-        var mapfilename = $('#map_filename').val()
-        update_axis_select(mapfilename);
-    } else {
-        $("#chart_forms").hide("slow");
     }
-  });
-  $('#map_filename').change(function() { // check for changing map filename
-      update_axis_select($(this).val());
-  });
-  
+    $('#widget_type').change(function() {
+        if ($(this).val() != 1) { // if the value changes from map to a chart widget, show x and y axis forms
+            $("#chart_forms").show("slow");
+            var mapfilename = $('#map_filename').val()
+            update_axis_select(mapfilename);
+        } else {
+            $("#chart_forms").hide("slow");
+        }
+    });
+    $('#map_filename').change(function() { // check for changing map filename
+        $("#x_axis").empty().append('<option value="">Loading..</option>'); // Nuke the current select options
+        $("#y_axis").empty().append('<option value="">Loading..</option>'); // Nuke the current select options
+        update_axis_select($(this).val());
+    });
 });
 </script>
 @endPush

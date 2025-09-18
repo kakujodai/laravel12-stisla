@@ -8,12 +8,11 @@
                 <div class="card-header">{{ __('My Uploaded Files') }}</div>
                 <div class="card-body">
                     <div class="table-responsive">
-                        <table class="table table-striped">
+                        <table id="uploads_table" class="table table-striped table-border compact">
                             <thead>
                                 <tr>
                                     <th>Title</th>
                                     <th>Filename</th>
-                                    <th>Files Hash</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -21,7 +20,6 @@
                                 <tr>
                                     <td>{{$file['title']}}</td>
                                     <td>{{$file['filename']}}</td>
-                                    <td>{{$file['md5']}}</td>
                                 </tr>
                                 @endforeach
                             </tbody>
@@ -40,7 +38,7 @@
                     <form action="{{ route('profile.upload') }}" method="POST" enctype="multipart/form-data">
                         @csrf
                         <div class="form-group">
-                            <label for="exampleInputEmail1">File Title</label>
+                            <label for="title">File Title</label>
                             <input type="title" class="form-control" id="title" name="title" aria-describedby="titleHelp" placeholder="Enter title">
                             <small id="titleHelp" class="form-text text-muted pb-5">This is where you make a title for the file you're uploading</small>
                             <input type="file" name="my_file">
@@ -52,4 +50,9 @@
         </div>
     </div>
 </div>
+<script>
+    document.addEventListener("DOMContentLoaded", function() {
+        new DataTable('#uploads_table');
+    });
+</script>
 @endsection
