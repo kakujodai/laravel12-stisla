@@ -17,6 +17,7 @@
         "@ngageoint/leaflet-geopackage": "^4.1.3",
         "chartjs": "^0.3.24",
         "leaflet-ajax": "^2.1.0",
-        "leaflet-spin": "^1.1.2"
+        "leaflet-spin": "^1.1.2",
+        "leaflet.markercluster": "^1.5.3"
     }
 }
