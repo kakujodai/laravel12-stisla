@@ -87,11 +87,24 @@
 								};
 
 								// Lazy load the geojson assigned to this widget
-								var {{ pathinfo($widget['filename'], PATHINFO_FILENAME); }}{{ $widget['random_id'] }} = new L.GeoJSON.AJAX("{{ route('profile.get-geojson', ['filename' => pathinfo($widget['filename'], PATHINFO_FILENAME)]) }}", {
+								var {{ pathinfo($widget['filename'], PATHINFO_FILENAME); }}{{ $widget['random_id'] }} = new L.GeoJSON.AJAX("{{ route('profile.get-geojson', ['filename' => pathinfo($widget['filename'], PATHINFO_FILENAME)]) }}",
+                                {
+                                    //Styling for point features on map. From previous code
+									pointToLayer: function (feature, latlng) {
+      									return L.circleMarker(latlng, {
+        									radius: 3,
+      			  							fillColor: feature.properties.status === 'active' ? 'green' : 'red',
+      			  							color: "#fff",
+      			  							weight: 1,
+        									opacity: 1,
+        									fillOpacity: 0.8
+      									});
+									},
 									oneachfeature: function (feature, layer) {
 										layer.bindPopup('<pre>'+json.stringify(feature.properties,null,' ').replace(/[\{\}"]/g,'')+'</pre>');
 									}
 								});
+                                
 								// Update the object we created earlier with an empty geojson, with the newly loaded ajax driven pull above
 								overlayMaps{{ $widget['random_id'] }}.{{ pathinfo($widget['filename'], PATHINFO_FILENAME); }} = {{ pathinfo($widget['filename'], PATHINFO_FILENAME); }}{{ $widget['random_id'] }};
 
@@ -105,6 +118,7 @@
 									map{{ $widget['random_id'] }}.invalidateSize();
 								});
 								resizeObserver{{ $widget['random_id'] }}.observe(document.getElementById("{{ $widget['random_id'] }}"));
+                                
 								// Create the layers for display in the interface (top right icon)
 								var layerControl = L.control.layers(baseMaps, overlayMaps{{ $widget['random_id'] }}).addTo(map{{ $widget['random_id'] }});	
 								L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
@@ -123,7 +137,9 @@
 										layer.bindPopup('<pre>'+JSON.stringify(layer.feature.properties,null,' ').replace(/[\{\}"]/g,'')+'</pre>');
 									});
 								});
-								// Create a trigger when we add a new geojson overlay
+								
+                                
+                                // Create a trigger when we add a new geojson overlay
 								map{{ $widget['random_id'] }}.on('overlayadd', onOverlayAdd);
 								// Function for the trigger above that hands us the overlay name that appears in the dropdown. Use this to query for the json data
 								function onOverlayAdd(e) {
