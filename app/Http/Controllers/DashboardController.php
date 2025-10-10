@@ -155,11 +155,15 @@ class DashboardController extends Controller
     public function add_widget($id, Request $request) { // Add the widget to the database
         $request->validate([
             'widget_type' => ['required'],
-            'x_axis' => ['required'],
-            'y_axis' => ['required'],
-            'widget_type' => ['required'],
             'map_filename' => ['required'],
         ]);
+        //if not map, validate x and y axis
+        if ($request->widget_type != 1) {
+            $request->validate([
+                'x_axis' => ['required'],
+                'y_axis' => ['required']
+            ]);
+        }
         if (!$request->widget_name) { # Did we not get a name? We should use the file Title
             $get_filename_title = FileUpload::select('title')
                 ->where('user_id', '=', Auth::id())
