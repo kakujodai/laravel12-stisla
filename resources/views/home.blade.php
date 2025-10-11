@@ -44,7 +44,7 @@
                                 </tbody>
                             </table>
                         @else
-                            <b>You don't appear to have dashboards. Please add one</b>"
+                            <b>You don't appear to have dashboards. Please add one.</b>
                         @endif
                         </div>
                     </div>

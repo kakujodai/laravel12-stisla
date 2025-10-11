@@ -147,6 +147,7 @@
 									map{{ $widget['random_id'] }}.invalidateSize();
 								});
 								resizeObserver{{ $widget['random_id'] }}.observe(document.getElementById("{{ $widget['random_id'] }}"));
+                                
 								// Create the layers for display in the interface (top right icon)
 								var layerControl = L.control.layers(baseMaps, overlayMaps{{ $widget['random_id'] }}).addTo(map{{ $widget['random_id'] }});	
 								L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
@@ -165,7 +166,9 @@
 										layer.bindPopup('<pre>'+JSON.stringify(layer.feature.properties,null,' ').replace(/[\{\}"]/g,'')+'</pre>');
 									});
 								});
-								// Create a trigger when we add a new geojson overlay
+								
+                                
+                                // Create a trigger when we add a new geojson overlay
 								map{{ $widget['random_id'] }}.on('overlayadd', onOverlayAdd);
 								// Function for the trigger above that hands us the overlay name that appears in the dropdown. Use this to query for the json data
 								function onOverlayAdd(e) {
