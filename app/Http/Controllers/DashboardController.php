@@ -217,4 +217,145 @@ class DashboardController extends Controller
         $widgets_to_del->delete();
         return redirect()->route('home');
     }
+    public function updateBounds(Request $request) {
+        $request->validate([
+            'widget_id' => ['required', 'integer'],
+            'bounds' => ['required', 'array'],
+            'bounds._northEast.lat' => ['required', 'numeric'],
+            'bounds._northEast.lng' => ['required', 'numeric'],
+            'bounds._southWest.lat' => ['required', 'numeric'],
+            'bounds._southWest.lng' => ['required', 'numeric'],
+        ]);
+
+        $userId = Auth::id();
+
+        // 1) Find the widget and ensure it belongs to the user
+        $widget = DashboardWidget::where('user_id', $userId)
+            ->where('id', $request->integer('widget_id'))
+            ->firstOrFail();
+
+        // Map widgets don't have x/y axes; only charts (2..4) are refreshable here
+        if (!($widget->widget_type_id > 1 && $widget->widget_type_id <= 4)) {
+            return response()->json(['labels' => [], 'datasets' => []]);
+        }
+
+        $meta = json_decode($widget->metadata, true);
+        $xAxis = $meta['x_axis'] ?? null;
+        $yAxis = $meta['y_axis'] ?? null;
+        $mapFilename = $meta['map_filename'] ?? null;
+
+        if (!$xAxis || !$yAxis || !$mapFilename) {
+            return response()->json(['labels' => [], 'datasets' => []]);
+        }
+
+        // 2) Load the GeoJSON from DB for this file & user
+        $geo = FileUpload::select('geojson')
+            ->where('filename', '=', $mapFilename)
+            ->where('user_id', '=', $userId)
+            ->first();
+
+        if (!$geo) {
+            return response()->json(['labels' => [], 'datasets' => []]);
+        }
+
+        $json = json_decode($geo->geojson, true);
+        if (!is_array($json) || ($json['type'] ?? '') !== 'FeatureCollection') {
+            return response()->json(['labels' => [], 'datasets' => []]);
+        }
+
+        // 3) Bounds
+        $ne = $request->input('bounds._northEast');
+        $sw = $request->input('bounds._southWest');
+        $north = (float) $ne['lat'];
+        $east  = (float) $ne['lng'];
+        $south = (float) $sw['lat'];
+        $west  = (float) $sw['lng'];
+
+        // 4) Filter features to those whose representative point falls in bbox
+        $filtered = [];
+        foreach ($json['features'] as $f) {
+            $pt = $this->featureRepresentativePoint($f);
+            if (!$pt) continue;
+            if ($this->pointInBounds($pt['lat'], $pt['lng'], $south, $west, $north, $east)) {
+                $filtered[] = $f;
+            }
+        }
+
+        // 5) Recompute chart data (same logic as show_dashboard)
+        $values_md = [];
+        if (strtoupper($yAxis) === 'COUNT') {
+            foreach ($filtered as $f) {
+                $key = $f['properties'][$xAxis] ?? null;
+                if ($key === null) continue;
+                if (!isset($values_md[$key])) $values_md[$key] = 1;
+                else $values_md[$key]++;
+            }
+            $labels = array_keys($values_md);
+            if ($widget->widget_type_id == 4) { // pie labels as strings
+                $labels = array_map(fn($v) => (string)$v, $labels);
+            }
+            $values = array_values($values_md);
+        } else {
+            foreach ($filtered as $f) {
+                $key = $f['properties'][$xAxis] ?? null;
+                $val = $f['properties'][$yAxis] ?? null;
+                if ($key === null) continue;
+                if (!is_numeric($val)) continue;
+                if (!isset($values_md[$key])) $values_md[$key] = (float)$val;
+                else $values_md[$key] += (float)$val;
+            }
+            $labels = array_keys($values_md);
+            $values = array_values($values_md);
+        }
+
+        return response()->json([
+            'labels' => $labels,
+            'datasets' => [[
+                'label' => $xAxis,
+                'data'  => $values,
+                'fill'  => true,
+                'pointRadius' => 0,
+                'borderWidth' => 1,
+            ]],
+        ]);
+    }
+
+/**
+ * Representative point for a feature.
+ * - Point → that point.
+ * - Polygon/MultiPolygon → first ring’s first coord (simple/fast).
+ *   (For production accuracy, compute real centroid/intersection or use PostGIS.)
+ */
+private function featureRepresentativePoint(array $feature): ?array
+{
+    $geom = $feature['geometry'] ?? null;
+    if (!$geom || !isset($geom['type'])) return null;
+
+    if ($geom['type'] === 'Point') {
+        $c = $geom['coordinates'] ?? null;
+        if (is_array($c) && count($c) >= 2) {
+            return ['lat' => (float)$c[1], 'lng' => (float)$c[0]];
+        }
+    }
+
+    if ($geom['type'] === 'Polygon' && !empty($geom['coordinates'][0][0])) {
+        $c = $geom['coordinates'][0][0];
+        return ['lat' => (float)$c[1], 'lng' => (float)$c[0]];
+    }
+
+    if ($geom['type'] === 'MultiPolygon' && !empty($geom['coordinates'][0][0][0])) {
+        $c = $geom['coordinates'][0][0][0];
+        return ['lat' => (float)$c[1], 'lng' => (float)$c[0]];
+    }
+
+    // TODO: handle LineString/MultiLineString if needed
+    return null;
+}
+
+private function pointInBounds(float $lat, float $lng, float $south, float $west, float $north, float $east): bool
+{
+    // no anti-meridian handling (keep it simple)
+    return $lat >= $south && $lat <= $north && $lng >= $west && $lng <= $east;
+}
+
 }

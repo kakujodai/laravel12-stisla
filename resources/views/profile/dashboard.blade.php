@@ -5,7 +5,7 @@
 @push('css')
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
 	<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/jqueryui/1.13.2/themes/base/jquery-ui.min.css" integrity="sha512-ELV+xyi8IhEApPS/pSj66+Jiw+sOT1Mqkzlh8ExXihe4zfqbWkxPRi8wptXIO9g73FSlhmquFlUOuMSoXz5IRw==" crossorigin="anonymous" referrerpolicy="no-referrer" />
-
+	<link rel="stylesheet" href="https://cdn.datatables.net/1.13.8/css/jquery.dataTables.min.css">
     <!-- CSS Libraries -->
 @endpush
 
@@ -37,6 +37,24 @@
 						console.error("Error fetching JSON:", error);
 						return null; // Or handle the error as appropriate
 					}
+				}
+			</script>
+			<script>
+				// global map event bus
+				window.MapBus = new EventTarget();
+				function mapGetBBox(map) {
+    				const b = map.getBounds();
+    				return {
+    	    			south: b.getSouthWest().lat,
+    	    			west:  b.getSouthWest().lng,
+    	    			north: b.getNorthEast().lat,
+    	    			east:  b.getNorthEast().lng
+    				};
+				}
+				// tiny debounce so we don't spam updates during pans
+				function debounce(fn, ms) {
+					let t;
+					return (...args) => { clearTimeout(t); t = setTimeout(() => fn(...args), ms); };
 				}
 			</script>
             @foreach ($widgets as $widget)
@@ -87,11 +105,15 @@
 								};
 
 								// Lazy load the geojson assigned to this widget
-								var {{ pathinfo($widget['filename'], PATHINFO_FILENAME); }}{{ $widget['random_id'] }} = new L.GeoJSON.AJAX("{{ route('profile.get-geojson', ['filename' => pathinfo($widget['filename'], PATHINFO_FILENAME)]) }}", {
-									oneachfeature: function (feature, layer) {
-										layer.bindPopup('<pre>'+json.stringify(feature.properties,null,' ').replace(/[\{\}"]/g,'')+'</pre>');
-									}
-								});
+								var {{ pathinfo($widget['filename'], PATHINFO_FILENAME); }}{{ $widget['random_id'] }} =
+  									new L.GeoJSON.AJAX("{{ route('profile.get-geojson', ['filename' => pathinfo($widget['filename'], PATHINFO_FILENAME)]) }}", {
+    									onEachFeature: function (feature, layer) {
+      										layer.bindPopup(
+        										'<pre>' + JSON.stringify(feature.properties, null, ' ').replace(/[\{\}"]/g, '') + '</pre>'
+      										);
+    									}
+  									});
+
 								// Update the object we created earlier with an empty geojson, with the newly loaded ajax driven pull above
 								overlayMaps{{ $widget['random_id'] }}.{{ pathinfo($widget['filename'], PATHINFO_FILENAME); }} = {{ pathinfo($widget['filename'], PATHINFO_FILENAME); }}{{ $widget['random_id'] }};
 
@@ -101,6 +123,26 @@
 									zoom: 14,
 									layers: [osm, {{ str_replace('-', '', pathinfo($widget['filename'], PATHINFO_FILENAME)); }}{{ $widget['random_id'] }}]
 								});
+
+								function broadcastBBox() {
+    								const bbox = mapGetBBox(map{{ $widget['random_id'] }});
+    								window.MapBus.dispatchEvent(new CustomEvent('map:bbox', {
+        								detail: {
+            								bbox,
+            								sourceWidgetId: '{{ $widget['id'] }}',
+            								sourceFilename: '{{ pathinfo($widget['filename'], PATHINFO_FILENAME) }}'
+        									}
+    								}));
+								}
+
+								// Debounce the pan/zoom broadcasts so we don't hammer the server
+								const debouncedBroadcast = debounce(broadcastBBox, 200);
+								map{{ $widget['random_id'] }}.on('moveend zoomend', debouncedBroadcast);
+
+								// Also broadcast once after data loads (no debounce)
+								{{ pathinfo($widget['filename'], PATHINFO_FILENAME); }}{{ $widget['random_id'] }}.on('data:loaded', broadcastBBox);
+
+								
 								const resizeObserver{{ $widget['random_id'] }} = new ResizeObserver(() => {
 									map{{ $widget['random_id'] }}.invalidateSize();
 								});
@@ -165,13 +207,16 @@
 								</form>
 							</div>
 							<div class="card-body">
-								<div class="no-sort" style="height: 100%; width: 100%;">
-									@if (!$widget['chart'])
-										<b>Failed to produce results with selected parameters.</b>
-									@else
-									<x-chartjs-component :chart="$widget['chart']" />
-									@endif
+								<div class="no-sort chart-widget"
+     								data-widget-id="{{ $widget['id'] }}"
+     								style="height: 100%; width: 100%;">
+  								@if (!$widget['chart'])
+    								<b>Failed to produce results with selected parameters.</b>
+  								@else
+    								<x-chartjs-component :chart="$widget['chart']" />
+  								@endif
 								</div>
+
 							</div>
 						</div>
 					</div>				
@@ -210,6 +255,65 @@
 			});
 		});
 	</script>
+	<script>
+	// Update a Chart.js instance with new labels/datasets
+	function applyChartData(chart, payload) {
+	chart.data.labels = payload.labels || [];
+	chart.data.datasets = (payload.datasets || []).map(ds => ({ ...ds }));
+	chart.update();
+	}
+
+	// Call our Laravel endpoint to get a chart's filtered data
+	async function fetchChartDataForWidget(widgetId, bbox) {
+	const res = await fetch('{{ route('dashboard.update-bounds') }}', {
+		method: 'POST',
+		headers: {
+		'Content-Type': 'application/json',
+		'X-CSRF-TOKEN': '{{ csrf_token() }}'
+		},
+		body: JSON.stringify({
+		widget_id: widgetId,
+		bounds: {
+			_northEast: { lat: bbox.north, lng: bbox.east },
+			_southWest: { lat: bbox.south, lng: bbox.west }
+		}
+		})
+	});
+	if (!res.ok) throw new Error('Failed to fetch chart data');
+	return res.json();
+	}
+
+	// If Chart.js isn't ready yet, don't try to update
+	function chartJsReady() {
+		return (typeof window.Chart !== 'undefined') && (typeof Chart.getChart === 'function');
+	}
+
+	// When any map broadcasts bbox, refresh each chart widget on the page
+	window.MapBus.addEventListener('map:bbox', async (e) => {
+		if (!chartJsReady()) return; // <-- guard
+
+		const { bbox } = e.detail;
+
+		// For each chart widget, find its canvas & Chart.js instance
+		const widgets = document.querySelectorAll('.chart-widget[data-widget-id]');
+		for (const el of widgets) {
+			const widgetId = el.getAttribute('data-widget-id');
+			const canvas = el.querySelector('canvas');
+			if (!canvas) continue;
+			const chart = Chart.getChart(canvas);
+			if (!chart) continue;
+
+			try {
+			const payload = await fetchChartDataForWidget(widgetId, bbox);
+			applyChartData(chart, payload);
+			} catch (err) {
+			console.error('Chart update failed for widget', widgetId, err);
+			}
+		}
+	});
+	</script>
+
+
 @endsection
 
 @push('scripts')
@@ -218,5 +322,7 @@
     <script src="https://code.jquery.com/ui/1.13.2/jquery-ui.js"></script>
 	<script src="https://cdn.jsdelivr.net/npm/hammerjs@2.0.8"></script>
 	<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom@next"></script>
+	<script src="https://cdn.datatables.net/1.13.8/js/jquery.dataTables.min.js"></script>
     <!-- Page Specific JS File -->
 @endpush
+

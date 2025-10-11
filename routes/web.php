@@ -22,6 +22,7 @@ Route::middleware(['auth'])->group(function () {
     Route::post('/profile/add-dashboard', [App\Http\Controllers\ProfileController::class, 'add_dashboard']);
     Route::get('/profile/add-dashboard', function () { return view('profile.add-dashboard');})->name('profile.add-dashboard');
     Route::get('/profile/dashboard/{id}', [App\Http\Controllers\DashboardController::class, 'show_dashboard'])->name('profile.dashboard');
+    Route::post('/profile/dashboard/update-bounds', [\App\Http\Controllers\DashboardController::class, 'updateBounds'])->name('dashboard.update-bounds'); //bounds of map update widgets
     Route::get('/profile/add-widgets/{id}', [App\Http\Controllers\DashboardController::class, 'add_widgets'])->name('profile.add-widgets');
     Route::post('/profile/add-widgets/{id}', [App\Http\Controllers\DashboardController::class, 'add_widget']);
     Route::post('/profile/delete-widget/{id}', [App\Http\Controllers\DashboardController::class, 'delete_widget'])->name('profile.delete-widget');
@@ -46,5 +47,6 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/faq-example', [App\Http\Controllers\ExampleController::class, 'faq'])->name('faq.example');
     Route::get('/news-example', [App\Http\Controllers\ExampleController::class, 'news'])->name('news.example');
     Route::get('/about-example', [App\Http\Controllers\ExampleController::class, 'about'])->name('about.example');
+
 
 });
