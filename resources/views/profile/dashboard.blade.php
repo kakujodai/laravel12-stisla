@@ -124,6 +124,20 @@
 									layers: [osm, {{ str_replace('-', '', pathinfo($widget['filename'], PATHINFO_FILENAME)); }}{{ $widget['random_id'] }}]
 								});
 
+								// ===== NEW: per-map storage key (tie to dashboard + widget)
+								const viewKey{{ $widget['random_id'] }} = 'mapview:dash{{ $dashboard_info["id"] }}:widget{{ $widget["id"] }}';
+
+  								function saveMapView{{ $widget['random_id'] }}() {
+    								const c = map{{ $widget['random_id'] }}.getCenter();
+    								const z = map{{ $widget['random_id'] }}.getZoom();
+    								localStorage.setItem(viewKey{{ $widget['random_id'] }}, JSON.stringify({ lat: c.lat, lng: c.lng, zoom: z }));
+  								}
+								function restoreMapView{{ $widget['random_id'] }}() {
+    								const raw = localStorage.getItem(viewKey{{ $widget['random_id'] }});
+    								if (!raw) return null;
+    								try { return JSON.parse(raw); } catch { return null; }
+  								}
+
 								function broadcastBBox() {
     								const bbox = mapGetBBox(map{{ $widget['random_id'] }});
     								window.MapBus.dispatchEvent(new CustomEvent('map:bbox', {
@@ -137,12 +151,35 @@
 
 								// Debounce the pan/zoom broadcasts so we don't hammer the server
 								const debouncedBroadcast = debounce(broadcastBBox, 200);
-								map{{ $widget['random_id'] }}.on('moveend zoomend', debouncedBroadcast);
+								map{{ $widget['random_id'] }}.on('moveend zoomend', () => {
+    								saveMapView{{ $widget['random_id'] }}(); // persist on every move/zoom
+    								debouncedBroadcast();
+  								});
 
-								// Also broadcast once after data loads (no debounce)
-								{{ pathinfo($widget['filename'], PATHINFO_FILENAME); }}{{ $widget['random_id'] }}.on('data:loaded', broadcastBBox);
+								// After the GeoJSON actually loads, restore-or-fit, save, bind popups, then broadcast
+								{{ pathinfo($widget['filename'], PATHINFO_FILENAME); }}{{ $widget['random_id'] }}.on('data:loaded', function () {
+									//Calculate the bounds of the geojson to target the map
+									var bounds = {{ pathinfo($widget['filename'], PATHINFO_FILENAME); }}{{ $widget['random_id'] }}.getBounds();
 
-								
+									// Try to restore saved view first
+									const v = restoreMapView{{ $widget['random_id'] }}();
+									if (v && Number.isFinite(v.lat) && Number.isFinite(v.lng) && Number.isFinite(v.zoom)) {
+										map{{ $widget['random_id'] }}.setView([v.lat, v.lng], v.zoom);
+									} else {
+										// No saved view: fit to data and save for next time
+										map{{ $widget['random_id'] }}.fitBounds(bounds);
+										saveMapView{{ $widget['random_id'] }}();
+									}
+
+									// Add popup info for each layer that includes all values in the geojson properties
+									{{ pathinfo($widget['filename'], PATHINFO_FILENAME); }}{{ $widget['random_id'] }}.eachLayer(function (layer) {
+										layer.bindPopup('<pre>'+JSON.stringify(layer.feature.properties,null,' ').replace(/[\{\}"]/g,'')+'</pre>');
+									});
+
+									// Now that the view is correct, broadcast the bbox once
+									broadcastBBox();
+								});
+
 								const resizeObserver{{ $widget['random_id'] }} = new ResizeObserver(() => {
 									map{{ $widget['random_id'] }}.invalidateSize();
 								});
@@ -155,20 +192,7 @@
 									id: 'mapbox/streets-v11',
 								}).addTo(map{{ $widget['random_id'] }});
 
-								// Use GeoJson to center map AFTER the ajax call to get the geojson
-								{{ pathinfo($widget['filename'], PATHINFO_FILENAME); }}{{ $widget['random_id'] }}.on('data:loaded', function() {
-									//Calculate the bounds of the geojson to target the map
-									var bounds = {{ pathinfo($widget['filename'], PATHINFO_FILENAME); }}{{ $widget['random_id'] }}.getBounds();
-									// Bind them to the map as a whole, so the map and geojson adjust
-									map{{ $widget['random_id'] }}.fitBounds(bounds);
-									// Add popup info for each layer that includes all values in the geojson properties
-									{{ pathinfo($widget['filename'], PATHINFO_FILENAME); }}{{ $widget['random_id'] }}.eachLayer(function (layer) {
-										layer.bindPopup('<pre>'+JSON.stringify(layer.feature.properties,null,' ').replace(/[\{\}"]/g,'')+'</pre>');
-									});
-								});
-								
-                                
-                                // Create a trigger when we add a new geojson overlay
+								// Create a trigger when we add a new geojson overlay
 								map{{ $widget['random_id'] }}.on('overlayadd', onOverlayAdd);
 								// Function for the trigger above that hands us the overlay name that appears in the dropdown. Use this to query for the json data
 								function onOverlayAdd(e) {
@@ -328,4 +352,5 @@
 	<script src="https://cdn.datatables.net/1.13.8/js/jquery.dataTables.min.js"></script>
     <!-- Page Specific JS File -->
 @endpush
+
 
