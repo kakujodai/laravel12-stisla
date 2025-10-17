@@ -94,6 +94,10 @@ class DashboardController extends Controller
                     $label_location = 'top';
                 }
 
+                $colorMap = $this->getColorArray($get_widget, $labels);
+
+                
+
                 $chart = Chartjs::build() //makes empty chart
                     ->name("Chart".Str::random()) //fill da chart!!!! with what we just did!!!!!!!
                     ->type($chart_types[$get_widget['widget_type_id']])
@@ -106,6 +110,7 @@ class DashboardController extends Controller
                             "fill" => true, //calculus (y/n)
                             "pointRadius" => 0,
                             "borderWidth" => 1,
+                            "backgroundColor" => $colorMap,
                         ]
                     ])
                     ->options([
@@ -312,6 +317,9 @@ class DashboardController extends Controller
             $values = array_values($values_md);
         }
 
+        //slap in smart colors i guess
+        $colormap = $this->getColorArray($widget, $labels);
+
         return response()->json([
             'labels' => $labels,
             'datasets' => [[
@@ -320,8 +328,52 @@ class DashboardController extends Controller
                 'fill'  => true,
                 'pointRadius' => 0,
                 'borderWidth' => 1,
+                'backgroundColor' => $colormap,
             ]],
         ]);
+    }
+
+    // given a widget file and the nodes we want then we get the colors we want
+    public function getColorArray($widgetFile, $labels){
+        $defaultColors = ['#FF692A', '#05DF72', '#8E51FF', '#E12AFB', '#FFD230'];
+        $metadata = json_decode($widgetFile['metadata'], true);
+        if(!array_key_exists('colorMap', $metadata))
+            $metadata['colorMap'] = array();
+        foreach($labels as $key){
+            if(!array_key_exists($key, $metadata['colorMap'])){//if we don't have a color
+                $metadata['colorMap'][$key] = $defaultColors[sizeof($metadata['colorMap']) % sizeof($defaultColors)];//set it to a default for now...
+            }
+        }
+        $widgetFile['metadata'] = json_encode($metadata);
+        $widgetFile->save();
+    
+        $curatedColor = array();//map of drawn keys=>color
+        foreach($labels as $key){
+            $curatedColor[] = $metadata['colorMap'][$key];
+        }
+        return $curatedColor;
+    }
+
+    public function changeColor(Request $request){
+        $request->validate([
+            'widget_id' => ['required', 'integer'],
+            'key' => ['required', 'string'],
+            'color' => ['required', 'string'],
+        ]);
+
+        $userId = Auth::id();
+
+        // 1) Find the widget and ensure it belongs to the user
+        $widget = DashboardWidget::where('user_id', $userId)
+            ->where('id', $request->widget_id)
+            ->firstOrFail();
+
+        $meta = json_decode($widget->metadata, true);
+
+        $meta['colormap'][$key] = $color;
+
+        $widget->metadata = json_encode($meta, true);
+        $widget->save();
     }
 
 /**
