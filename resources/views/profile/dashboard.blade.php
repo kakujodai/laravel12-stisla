@@ -104,18 +104,23 @@
 									"Open Street Map TOPO-WMS": topowmsLayer,
 								};
 
+								//Create circleMarkers
+								function createCircleMarker (feature, latlng) {
+    								// Optional: customize color based on feature properties
+    								const color = feature.properties.color || '#3388ff';
+
+    								return L.circleMarker(latlng, {
+        								radius: 3,
+        								color: color,
+        								fillColor: color,
+        								weight: 1,
+        								fillOpacity: 0.8
+    								});
+								}
 								// Lazy load the geojson assigned to this widget
 								var {{ pathinfo($widget['filename'], PATHINFO_FILENAME); }}{{ $widget['random_id'] }} =
   									new L.GeoJSON.AJAX("{{ route('profile.get-geojson', ['filename' => pathinfo($widget['filename'], PATHINFO_FILENAME)]) }}", {
-    									pointToLayer: function (feature, latlng) {
-            								return L.circleMarker(latlng, {
-                							radius: 3,              // adjust point size
-                							color: '#3388ff',       // stroke color
-                							weight: 1,              // stroke weight
-                							fillColor: '#3388ff',   // fill color
-                							fillOpacity: 0.7        // transparency
-            								});
-        								},
+    									pointToLayer: createCircleMarker,
 										onEachFeature: function (feature, layer) {
       										layer.bindPopup(
         										'<pre>' + JSON.stringify(feature.properties, null, ' ').replace(/[\{\}"]/g, '') + '</pre>'
