@@ -61,13 +61,14 @@
                 @if ($widget['widget_type_id'] == 1) <!-- I'm the map, i'm the map (he's the map, he's the map) I'M THE MAP!-->
                 <div class="col-md-4">
                     <div id="sortable-cards{{ $widget['id'] }}" class="card">
-                        <div class="card-header flex-header">
-							{{$widget['name']}}
-							<form action="{{ route('profile.delete-widget', ['id' => $widget['id'], 'dash_id' => $dashboard_info['id']]) }}" method="POST" style="display: inline-block;">
-								@csrf
-								<button type="submit" class="btn btn-secondary rounded-sm fas fa-trash"></button>
-							</form>
-						</div>
+                        <x-widget-header 
+   							:name="$widget['name']" 
+						    :widget-id="$widget['id']" 
+						    :dashboard-id="$dashboard_info['id']" 
+							:random-id="$widget['random_id']"
+							:widget-type-id="$widget['widget_type_id']" 
+							:has-settings="true"
+						/>
                         <div class="card-body" style="height:400px;">
 			    			<div class="no-sort" id="{{ $widget['random_id'] }}" style="height:100%;"></div>
 							<script>
