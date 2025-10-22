@@ -42,6 +42,13 @@
 			                    <select class="form-control mb-2" type="select" id="y_axis" name="y_axis">
                                     <option value="">Loading..</option>
 			                    </select>
+                                <label for="mapLinkID">Decide which map widget to link to</label>
+			                    <select class="form-control mb-2" type="select" id="mapLinkID" name="mapLinkID">
+                                    <option value="noLink321π">No Linking</option>
+                                    @foreach ($mapWidgets as $mapWidget)
+                                    <option value="{{ array_keys($mapWidgets, $mapWidget, true)[0] }}">{{ $mapWidget }}</option>
+                                    @endforeach
+			                    </select>
 			                </div>
                             <button class="btn btn-primary" type="submit">Submit</button>
                         </div>

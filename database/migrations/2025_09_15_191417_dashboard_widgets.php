@@ -22,6 +22,14 @@ return new class extends Migration
             $table->timestamps();
         });
     }
+    /**
+     * metadata array contents:
+     * map_filename
+     * y-axis
+     * x-axis
+     * mapLinkID: stores the widget ID of the map we point to
+     * colorMap[$label] => color hex code
+     */
 
     /**
      * Reverse the migrations.

@@ -63,7 +63,7 @@
     </form>
 </div>
 
-<!-- Toggle script -->>
+<!-- Toggle script -->
 @if ($hasSettings && $randomId)
 <script>
 document.addEventListener('DOMContentLoaded', function() {
