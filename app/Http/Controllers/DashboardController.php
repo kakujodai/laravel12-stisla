@@ -183,7 +183,7 @@ class DashboardController extends Controller
                 ->where('user_id', '=', Auth::id())
                 ->where('filename', '=', $request->map_filename)
                 ->get();
-            if ($request->widget_type > 1) { # Give our own name for the widget if they leave it blank
+            if ($request->widget_type > 1 && $request->widget_type < 5) { # Give our own name for the widget if they leave it blank
                 if ($request->y_axis == 'COUNT') { # If it's count, don't include SUM 
                     $widget_name = "$request->y_axis BY $request->x_axis ";
                 } else { 
@@ -202,7 +202,7 @@ class DashboardController extends Controller
         $widget->widget_type_id = $request->widget_type;
         if ($request->widget_type == 1) { #  Maps
             $metadata = json_encode(['map_filename' => $request->map_filename]);
-        } elseif ($request->widget_type > 1){ # handle all charts
+        } elseif ($request->widget_type > 1 && $request->widget_type < 5){ # handle all charts
             $metadata = json_encode(['x_axis' => $request->x_axis, 'y_axis' => $request->y_axis, 'map_filename' => $request->map_filename, 'mapLinkID' => $request->mapLinkID]);
         }
         $widget->metadata = $metadata;
@@ -254,7 +254,7 @@ class DashboardController extends Controller
 
         // Map widgets don't have x/y axes; only charts (2..4) are refreshable here
         if (!($widget->widget_type_id > 1 && $widget->widget_type_id <= 4)) {
-            return response()->json(['labels' => [], 'datasets' => []]);
+            return response()->json(['labels' => [], 'datasets' => ['backgroundColor' => $this->getColorArray($widget, $labels)]]);
         }
 
         $meta = json_decode($widget->metadata, true);
@@ -262,6 +262,7 @@ class DashboardController extends Controller
         $yAxis = $meta['y_axis'] ?? null;
         $mapFilename = $meta['map_filename'] ?? null;
 
+        // if we don't have an axis or map linking is disabled
         if (!$xAxis || !$yAxis || !$mapFilename || ($meta['mapLinkID'] == 'noLink321π')) {
             return response()->json(['labels' => [], 'datasets' => ['backgroundColor' => $this->getColorArray($widget, $labels)]]);
         }
@@ -273,12 +274,12 @@ class DashboardController extends Controller
             ->first();
 
         if (!$geo) {
-            return response()->json(['labels' => [], 'datasets' => []]);
+            return response()->json(['labels' => [], 'datasets' => ['backgroundColor' => $this->getColorArray($widget, $labels)]]);
         }
 
         $json = json_decode($geo->geojson, true);
         if (!is_array($json) || ($json['type'] ?? '') !== 'FeatureCollection') {
-            return response()->json(['labels' => [], 'datasets' => []]);
+            return response()->json(['labels' => [], 'datasets' => ['backgroundColor' => $this->getColorArray($widget, $labels)]]);
         }
 
         // 3) Bounds
@@ -339,16 +340,12 @@ class DashboardController extends Controller
         ]);
     }
 
-    // given a widget file and the nodes we want then we get the colors we want
-    private function setColorArray($labels){
-        // initializing the colormap if there isn't one
-        $colorArray = array();
-        $defaultColors = ['#FF692A', '#05DF72', '#8E51FF', '#E12AFB', '#FFD230'];// default colors
-        return $colorArray();
-    }
-    public function getColorArray($widgetFile, $labels){
+    // given a widget file and the nodes/keys we want then we get the colors we want
+    private function getColorArray($widgetFile, $labels){
         $metadata = json_decode($widgetFile['metadata'], true);
-        if(!in_array('colorMap', $metadata)){// need to initialize the color map
+
+        // initialize color map if there isn't one
+        if(!in_array('colorMap', $metadata)){
             $metadata['colorMap'] = array();
             $defaultColors = ['#FF692A', '#05DF72', '#8E51FF', '#E12AFB', '#FFD230'];// default colors
             foreach($labels as $key)//give all the labels a 'default' color
@@ -356,6 +353,7 @@ class DashboardController extends Controller
             $widgetFile->metadata = json_encode($metadata);
             $widgetFile->save();
         }
+
         if(is_array($labels)){// we were given an array of labels to look at
             $curatedColor = array();//map of drawn keys=>color
             foreach($labels as $key)
@@ -366,6 +364,20 @@ class DashboardController extends Controller
             return $metadata['colorMap'];
     }
 
+    // public function that returns an associative array of widget colors, key => color 
+    // filtering with key array is optional
+    public function getWidgetColors(Request $request){
+        $request->validate([
+            'widget_id' => ['required', 'integer'],
+        ]);
+        $userId = Auth::id();
+        // 1) Find the widget and ensure it belongs to the user
+        $widget = DashboardWidget::where('user_id', $userId)
+            ->where('id', $request->widget_id)
+            ->firstOrFail();
+        return response()->json(json_encode(getColorArray($widget, $request->keys), true));
+    }
+    // public function to call when you want to change a color in metadata['colormap']
     public function changeColor(Request $request){
         $request->validate([
             'widget_id' => ['required', 'integer'],
@@ -381,8 +393,12 @@ class DashboardController extends Controller
             ->firstOrFail();
 
         $meta = json_decode($widget->metadata, true);
+        $color = $request->color;
+        $key = $request->key;
 
-        $meta['colormap'][$key] = $color;
+        //key exists in array and our requested color is in fact a hex code
+        if(array_key_exists($rkey, $meta['colormap']) && (preg_match('/^#[a-f0-9]{6}$/i', $color)))
+            $meta['colormap'][$key] = $color;
 
         $widget->metadata = json_encode($meta, true);
         $widget->save();
