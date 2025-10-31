@@ -17,14 +17,6 @@
 
                     <!-- if widget is map -->
                     @if($widgetTypeId == 1)
-                        <!-- Checkbox: Render Data Based on Map View toggle -->
-                        <div class="form-check">
-                            <input class="form-check-input" type="checkbox" id="toggleDataRenderinView{{ $randomId }}">
-                            <label class="form-check-label" for="toggleDataRenderinView{{ $randomId }}" title="Render data in charts based on map view">
-                                Render Data in Map View
-                            </label>
-                        </div>
-
                         <!-- Marker color selector -->
                         <div class="form-group mt-2">
                             <label for="colorSelect{{ $randomId }}" title="Changes color of markers/points">
