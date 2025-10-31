@@ -377,7 +377,7 @@ class DashboardController extends Controller
             ->firstOrFail();
         return response()->json(json_encode(getColorArray($widget, $request->keys), true));
     }
-    // public function to call when you want to change a color in metadata['colormap']
+    // public function to call when you want to change a color in metadata['colorMap']
     public function changeColor(Request $request){
         $request->validate([
             'widget_id' => ['required', 'integer'],
@@ -397,8 +397,8 @@ class DashboardController extends Controller
         $key = $request->key;
 
         //key exists in array and our requested color is in fact a hex code
-        if(array_key_exists($rkey, $meta['colormap']) && (preg_match('/^#[a-f0-9]{6}$/i', $color)))
-            $meta['colormap'][$key] = $color;
+        if(array_key_exists($key, $meta['colorMap']) && (preg_match('/^#[a-f0-9]{6}$/i', $color)))
+            $meta['colorMap'][$key] = $color;
 
         $widget->metadata = json_encode($meta, true);
         $widget->save();
