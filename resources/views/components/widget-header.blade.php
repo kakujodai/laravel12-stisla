@@ -3,14 +3,14 @@
     <span>{{ $name }}</span>
 
     <!-- Center: Settings Button -->
-    @if ($hasSettings && $randomId)
+    @if ($hasSettings)
         <div class="mx-auto position-relative">
-            <button id="mapSettingsBtn{{ $randomId }}" class="btn btn-primary btn-sm">
+            <button id="settingsBtn{{ $randomId }}" class="btn btn-primary btn-sm">
                 <i class="fa fa-bars"></i>
             </button>
 
             <!-- Popup menu Depends on widget type -->
-            <div id="mapSettingsMenu{{ $randomId }}" 
+            <div id="settingsMenu{{ $randomId }}" 
                 class="card shadow-sm"
                 style="display:none; position:absolute; top:100%; left:50%; transform:translateX(-50%); z-index:3000; min-width:180px; max-width:300px;">
                 <div class="card-body p-2">
@@ -34,12 +34,18 @@
                     
                     <!-- if widget is chart -->
                     @elseif ($widgetTypeId == 2 || $widgetTypeId == 3 || $widgetTypeId == 4)
-                        <!-- Checkbox: Render Data Based on Map View toggle -->
-                        <div class="form-check">
-                            <input class="form-check-input" type="checkbox" id="toggleDataRenderinView{{ $randomId }}">
-                            <label class="form-check-label" for="toggleDataRenderinView{{ $randomId }}" title="Render data in charts based on map view">
-                                Render Data in Map View
+                        <!-- Mark color selector -->
+                        <div class="form-group mt-2">
+                            <label for="colorSelect" title="Changes color of markers/points">
+                                Marker Color Picker
                             </label>
+                            <select class="form-select" id="colorSelect" name="colors">
+                                <option value="">-- Select a color --</option>
+                                <option value="blue">Blue</option>
+                                <option value="red">Red</option>
+                                <option value="green">Green</option>
+                            </select>
+                            <!-- <input type="color" id="colorSelect" value="#3388ff"> -->
                         </div>
 
                     @endif
@@ -56,11 +62,11 @@
 </div>
 
 <!-- Toggle script -->
-@if ($hasSettings && $randomId)
+@if ($hasSettings)
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    const btn = document.getElementById('mapSettingsBtn{{ $randomId }}');
-    const menu = document.getElementById('mapSettingsMenu{{ $randomId }}');
+    const btn = document.getElementById('settingsBtn{{ $randomId }}');
+    const menu = document.getElementById('settingsMenu{{ $randomId }}');
     if (!btn || !menu) return;
     
     btn.addEventListener('click', (e) => {
