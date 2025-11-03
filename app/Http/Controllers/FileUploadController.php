@@ -7,7 +7,7 @@ use Illuminate\Validation\Rules\File;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Process;
 use App\Models\FileUpload;
-
+use App\Models\GeoFeature;
 
 class FileUploadController extends Controller
 {
@@ -56,7 +56,7 @@ private function safeDecodeJson(string $raw): array
         return [$fallback, $decoded2];
     }
 
-    public function upload(Request $request)
+public function upload(Request $request)
     {
         $request->validate([
             'my_file' => ['required'],
@@ -107,6 +107,20 @@ private function safeDecodeJson(string $raw): array
                     $file_upload->title              = $title;
                     $file_upload->save();
 
+                    //Insert features into geo_features table
+                    if (!empty($json['features']) && is_array($json['features'])) {
+                        foreach ($json['features'] as $feature) {
+                            // Skip if not 'geometry' feature
+                            if (!isset($feature['geometry'])) continue;
+
+                            GeoFeature::create([
+                                'file_upload_id' => $file_upload->id,
+                                'geometry' => $feature['geometry'],
+                                'properties' => $feature['properties'] ?? [],
+                            ]);
+                        }
+                    }
+
                 } elseif ($file_extension === 'gpkg' || $file_extension === 'geopkg') {
                     // List layers
                     exec("/bin/ogrinfo $filePath", $output_array);
@@ -147,6 +161,20 @@ private function safeDecodeJson(string $raw): array
                             $file_upload->md5                 = md5_file($filePath);
                             $file_upload->title               = "$final_output";
                             $file_upload->save();
+
+                            //Insert features into geo_features table
+                            if (!empty($json['features']) && is_array($json['features'])) {
+                                foreach ($json['features'] as $feature) {
+                                    // Skip if not 'geometry' feature
+                                    if (!isset($feature['geometry'])) continue;
+
+                                    GeoFeature::create([
+                                        'file_upload_id' => $file_upload->id,
+                                        'geometry' => $feature['geometry'],
+                                        'properties' => $feature['properties'] ?? [],
+                                    ]);
+                                }
+                            }
 
                             $layer++;
                         }
@@ -193,6 +221,20 @@ private function safeDecodeJson(string $raw): array
                             $file_upload->md5                 = md5_file($filePath);
                             $file_upload->title               = "$final_output (L$layer)";
                             $file_upload->save();
+                            
+                            //Insert features into geo_features table
+                            if (!empty($json['features']) && is_array($json['features'])) {
+                                foreach ($json['features'] as $feature) {
+                                    // Skip if not 'geometry' feature
+                                    if (!isset($feature['geometry'])) continue;
+
+                                    GeoFeature::create([
+                                        'file_upload_id' => $file_upload->id,
+                                        'geometry' => $feature['geometry'],
+                                        'properties' => $feature['properties'] ?? [],
+                                    ]);
+                                }
+                            }
 
                             $layer++;
                         }
@@ -210,4 +252,30 @@ private function safeDecodeJson(string $raw): array
             return back()->with('error', 'This file already exists within the system');
         }
     }
+
+    //Function to get GeoJSON Feature Collection by FileUpload ID
+    public function toFeatureCollection($id)
+    {
+        //Try to find file and abort if not found
+        $file = FileUpload::findOrFail($id);
+
+        //Get all features related to this file
+        $features = $file->features()->get()
+
+        //Map DB rows to GeoJson feature collection
+        $geojson = [
+            'type' => 'FeatureCollection',
+            'features' => $features->map(function ($f) {
+                return [
+                    'type' => 'Feature',
+                    'geometry' => $f->geometry,
+                    'properties' => $f->properties,
+                ];
+            }),
+        ];
+
+        //Return as JSON
+        return response()->json($geojson);
+    }
+
 }

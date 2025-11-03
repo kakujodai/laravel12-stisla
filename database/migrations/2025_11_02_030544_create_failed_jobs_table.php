@@ -13,6 +13,9 @@ return new class extends Migration
      */
     public function up()
     {
+        // Drop table first if it exists
+        Schema::dropIfExists('failed_jobs');
+        
         Schema::create('failed_jobs', function (Blueprint $table) {
             $table->bigIncrements('id');
             $table->string('uuid')->unique();
