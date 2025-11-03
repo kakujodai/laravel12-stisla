@@ -66,7 +66,7 @@ class DashboardController extends Controller
                         }
                     }
                     $labels = array_keys($values_md);
-                    if ($get_widget['widget_type_id'] == 4) { # Piecharts don't like labels to be numberical, so convert them all
+                    if ($get_widget['widget_type_id'] == 4) { # Piecharts don't like labels to be numerical, so convert them all
                         $labels = array_map(function($value) {
                             return (string)$value;
                         }, $labels);
