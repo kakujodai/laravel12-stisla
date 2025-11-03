@@ -6,7 +6,54 @@
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
 	<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/jqueryui/1.13.2/themes/base/jquery-ui.min.css" integrity="sha512-ELV+xyi8IhEApPS/pSj66+Jiw+sOT1Mqkzlh8ExXihe4zfqbWkxPRi8wptXIO9g73FSlhmquFlUOuMSoXz5IRw==" crossorigin="anonymous" referrerpolicy="no-referrer" />
 	<link rel="stylesheet" href="https://cdn.datatables.net/1.13.8/css/jquery.dataTables.min.css">
+	<link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
     <!-- CSS Libraries -->
+	<style>
+		/* Style the select2 box to match requested UI: bordered container, tags on top, options below */
+		.col-selector-wrap .select2-container--default .select2-selection--multiple {
+			border: none; /* container border handled by wrapper */
+			padding: 6px 6px 2px 6px;
+			min-height: 44px;
+			box-shadow: none;
+		}
+		.col-selector-wrap .select2-container--default .select2-selection__rendered {
+			display: flex;
+			flex-wrap: wrap;
+			gap: 6px;
+			align-items: center;
+		}
+		.col-selector-wrap .select2-container--default .select2-selection__choice {
+			background:#ececec;
+			border:1px solid #c9c9c9;
+			color:#222;
+      		padding:4px 8px;
+			border-radius:4px;
+			margin:0;
+			font-weight:600;
+			letter-spacing:.2px;
+		}
+		.col-selector-wrap .select2-dropdown {
+			border-top: 1px solid #e2e2e2;
+			box-shadow: none;
+			border-radius: 0 0 6px 6px;
+		}
+		/* Ensure the dropdown fills the wrapper width */
+		.col-selector-wrap .select2-container .select2-dropdown--below {
+			width: 100% !important;
+		}
+		/* Increase list item padding to match screenshots */
+		.col-selector-wrap .select2-results__option {
+			padding: 10px 12px;
+			font-weight: 600;
+		}
+		.col-selector-wrap .select2-container--default .select2-selection--multiple {
+			border: 1px solid #000;
+			border-radius: 6px;
+			padding: 6px 6px 2px 6px;
+			min-height: 44px;
+			box-shadow: none;
+		}
+	</style>
 @endpush
 
 @section('content')
@@ -24,6 +71,7 @@
 	    	<script src="https://makinacorpus.github.io/Leaflet.Spin/docs/spin/dist/spin.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 	    	<script src="https://cdnjs.cloudflare.com/ajax/libs/Leaflet.Spin/1.1.2/leaflet.spin.js" integrity="sha512-em8lnJhVwVTWfz2Qg/1hRvLz6gTM4RiXs5gTywZMz/NNunZUybf1PsYHKAjcdx2/+zdRwU4PzOM9CwC5o2ko0g==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 			<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.markercluster/1.5.3/leaflet.markercluster.min.js" integrity="sha512-TiMWaqipFi2Vqt4ugRzsF8oRoGFlFFuqIi30FFxEPNw58Ov9mOy6LgC05ysfkxwLE0xVeZtmr92wVg9siAFRWA==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+
 			<script>
 				async function getJsonFromServer(url) {
 					try {
@@ -57,6 +105,7 @@
 					return (...args) => { clearTimeout(t); t = setTimeout(() => fn(...args), ms); };
 				}
 			</script>
+
             @foreach ($widgets as $widget)
                 @if ($widget['widget_type_id'] == 1) <!-- I'm the map, i'm the map (he's the map, he's the map) I'M THE MAP!-->
                 <div class="col-md-4">
@@ -91,12 +140,9 @@
 									maxZoom: 19,
 									attribution: 'Map data: © OpenStreetMap contributors, SRTM | Map style: © OpenTopoMap (CC-BY-SA)'
 								});
-								var osmwmsLayer = L.tileLayer.wms('http://ows.mundialis.de/services/service?', {
-									layers: 'OSM-WMS'
-								})
-								var topowmsLayer = L.tileLayer.wms('http://ows.mundialis.de/services/service?', {
-									layers: 'TOPO-WMS'
-								})
+								var osmwmsLayer = L.tileLayer.wms('http://ows.mundialis.de/services/service?', { layers: 'OSM-WMS' });
+								var topowmsLayer = L.tileLayer.wms('http://ows.mundialis.de/services/service?', { layers: 'TOPO-WMS' });
+
 								var baseMaps = {
 									"OpenStreet": osm,
 									"OpenStreet Topographic": osmT,
@@ -105,11 +151,9 @@
 									"Open Street Map TOPO-WMS": topowmsLayer,
 								};
 
-								//Create circleMarkers
+								// Create circleMarkers
 								function createCircleMarker (feature, latlng) {
-    								// Optional: customize color based on feature properties
     								const color = feature.properties.color || '#3388ff';
-
     								return L.circleMarker(latlng, {
         								radius: 3,
         								color: color,
@@ -118,28 +162,26 @@
         								fillOpacity: 0.8
     								});
 								}
+
 								// Lazy load the geojson assigned to this widget
 								var {{ pathinfo($widget['filename'], PATHINFO_FILENAME); }}{{ $widget['random_id'] }} =
   									new L.GeoJSON.AJAX("{{ route('profile.get-geojson', ['filename' => pathinfo($widget['filename'], PATHINFO_FILENAME)]) }}", {
     									pointToLayer: createCircleMarker,
 										onEachFeature: function (feature, layer) {
-      										layer.bindPopup(
-        										'<pre>' + JSON.stringify(feature.properties, null, ' ').replace(/[\{\}"]/g, '') + '</pre>'
-      										);
+      										layer.bindPopup('<pre>' + JSON.stringify(feature.properties, null, ' ').replace(/[\{\}"]/g, '') + '</pre>');
     									}
   									});
 
-								// Update the object we created earlier with an empty geojson, with the newly loaded ajax driven pull above
 								overlayMaps{{ $widget['random_id'] }}.{{ pathinfo($widget['filename'], PATHINFO_FILENAME); }} = {{ pathinfo($widget['filename'], PATHINFO_FILENAME); }}{{ $widget['random_id'] }};
 
-								// Instantiate the map with the map layer, and our default geojson 
+								// Instantiate the map with the base layer and our default geojson 
 								var map{{ $widget['random_id'] }} = L.map('{{ $widget['random_id'] }}', {
 									center: [0,0],
 									zoom: 14,
 									layers: [osm, {{ str_replace('-', '', pathinfo($widget['filename'], PATHINFO_FILENAME)); }}{{ $widget['random_id'] }}]
 								});
 
-								// ===== NEW: per-map storage key (tie to dashboard + widget)
+								// ===== per-map storage key (tie to dashboard + widget)
 								const viewKey{{ $widget['random_id'] }} = 'mapview:dash{{ $dashboard_info["id"] }}:widget{{ $widget["id"] }}';
 
   								function saveMapView{{ $widget['random_id'] }}() {
@@ -164,34 +206,30 @@
     								}));
 								}
 
-								// Debounce the pan/zoom broadcasts so we don't hammer the server
+								// Debounce the pan/zoom broadcasts
 								const debouncedBroadcast = debounce(broadcastBBox, 200);
 								map{{ $widget['random_id'] }}.on('moveend zoomend', () => {
     								saveMapView{{ $widget['random_id'] }}(); // persist on every move/zoom
     								debouncedBroadcast();
   								});
 
-								// After the GeoJSON actually loads, restore-or-fit, save, bind popups, then broadcast
+								// After the GeoJSON loads, fit/restore and broadcast once
 								{{ pathinfo($widget['filename'], PATHINFO_FILENAME); }}{{ $widget['random_id'] }}.on('data:loaded', function () {
-									//Calculate the bounds of the geojson to target the map
 									var bounds = {{ pathinfo($widget['filename'], PATHINFO_FILENAME); }}{{ $widget['random_id'] }}.getBounds();
 
-									// Try to restore saved view first
 									const v = restoreMapView{{ $widget['random_id'] }}();
 									if (v && Number.isFinite(v.lat) && Number.isFinite(v.lng) && Number.isFinite(v.zoom)) {
 										map{{ $widget['random_id'] }}.setView([v.lat, v.lng], v.zoom);
 									} else {
-										// No saved view: fit to data and save for next time
 										map{{ $widget['random_id'] }}.fitBounds(bounds);
 										saveMapView{{ $widget['random_id'] }}();
 									}
 
-									// Add popup info for each layer that includes all values in the geojson properties
 									{{ pathinfo($widget['filename'], PATHINFO_FILENAME); }}{{ $widget['random_id'] }}.eachLayer(function (layer) {
 										layer.bindPopup('<pre>'+JSON.stringify(layer.feature.properties,null,' ').replace(/[\{\}"]/g,'')+'</pre>');
 									});
 
-									// Now that the view is correct, broadcast the bbox once
+									// broadcast once
 									broadcastBBox();
 								});
 
@@ -200,32 +238,27 @@
 								});
 								resizeObserver{{ $widget['random_id'] }}.observe(document.getElementById("{{ $widget['random_id'] }}"));
                                 
-								// Create the layers for display in the interface (top right icon)
+								// Layers UI
 								var layerControl = L.control.layers(baseMaps, overlayMaps{{ $widget['random_id'] }}).addTo(map{{ $widget['random_id'] }});	
 								L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
 									attribution: '&copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a>',
 									id: 'mapbox/streets-v11',
 								}).addTo(map{{ $widget['random_id'] }});
 
-								// Create a trigger when we add a new geojson overlay
+								// Load additional overlays on demand
 								map{{ $widget['random_id'] }}.on('overlayadd', onOverlayAdd);
-								// Function for the trigger above that hands us the overlay name that appears in the dropdown. Use this to query for the json data
 								function onOverlayAdd(e) {
-									// Add a spinner to the map while we wait
 									map{{ $widget['random_id'] }}.spin(true);
 									var full_name = e.name;
-									// Pull geojson using the getJsonFromServer function above and add it to the overlayMap object for the correct key
 									getJsonFromServer(`/profile/get-geojson/${full_name}`)
-										.then(data => { // We got the data without issue
+										.then(data => {
 											if (data) {
-												// Adding the data. Have to segregate the overlayMaps from each map so they don't modify each other
 												overlayMaps{{ $widget['random_id'] }}[full_name].addData(data);
-												// Newly added layers have their popups added to the map using eachLayer instead of oneachfeature
 												overlayMaps{{ $widget['random_id'] }}[full_name].eachLayer(function (layer) {
 													layer.bindPopup('<pre>'+JSON.stringify(layer.feature.properties,null,' ').replace(/[\{\}"]/g,'')+'</pre>');
 												});
-												map{{ $widget['random_id'] }}.spin(false); // Turn off the spin
-											} else { // We failed... TODO: make this appear on screen to the user so they refresh
+												map{{ $widget['random_id'] }}.spin(false);
+											} else {
 												console.log("Failed to get json");
 											}
 										});
@@ -234,38 +267,157 @@
                         </div>
                     </div>
                 </div>
-				@else
-					@if ($widget['widget_type_id'] == 4) <!-- I'm a wide chart -->
-					<div class="col-md-3">
-					@else
-					<div class="col-md-6">
-					@endif
-						<div id="sortable-cards{{ $widget['id'] }}" class="card">
-							<div class="card-header flex-header">
-								{{$widget['name']}}
-								<form action="{{ route('profile.delete-widget', ['id' => $widget['id'], 'dash_id' => $dashboard_info['id']]) }}" method="POST" style="display: inline-block;">
-									@csrf
-									<button type="submit" class="btn btn-secondary rounded-sm fas fa-trash"></button>
-								</form>
-							</div>
-							<div class="card-body">
-								<div class="no-sort chart-widget"
-     								data-widget-id="{{ $widget['id'] }}"
-     								style="height: 100%; width: 100%;">
-  								@if (!$widget['chart'])
-    								<b>Failed to produce results with selected parameters.</b>
-  								@else
-    								<x-chartjs-component :chart="$widget['chart']" />
-  								@endif
-								</div>
 
+				@elseif ($widget['widget_type_id'] > 1 && $widget['widget_type_id'] <= 4) <!-- Charts -->
+					@if ($widget['widget_type_id'] == 4) <!-- I'm a wide chart -->
+						<div class="col-md-3">
+					@else
+						<div class="col-md-6">
+					@endif
+							<div id="sortable-cards{{ $widget['id'] }}" class="card">
+								<div class="card-header flex-header">
+									{{$widget['name']}}
+									<form action="{{ route('profile.delete-widget', ['id' => $widget['id'], 'dash_id' => $dashboard_info['id']]) }}" method="POST" style="display: inline-block;">
+										@csrf
+										<button type="submit" class="btn btn-secondary rounded-sm fas fa-trash"></button>
+									</form>
+								</div>
+								<div class="card-body">
+									<div class="no-sort chart-widget"
+										data-widget-id="{{ $widget['id'] }}"
+										data-map-link-id="{{ $widget['map_link_id'] ?? 'noLink321π' }}"
+										style="height: 100%; width: 100%;">
+									@if (!$widget['chart'])
+										<b>Failed to produce results with selected parameters.</b>
+									@else
+										<x-chartjs-component :chart="$widget['chart']" />
+									@endif
+									</div>
+								</div>
 							</div>
 						</div>
-					</div>				
-                @endif
+
+					@else <!-- Table -->
+						<div  class="col-md-12">
+							<div id="no-resize" class="card">
+								<div class="card-header">
+									<div class="row">
+										<div class="col-sm-10 text-left">
+											<h2 class="card-title">{{$widget['name']}}</h2>
+										</div>
+										<div class="col-sm-2">
+											<div class="btn-group float-right ms-2">
+												<form id="delete-{{ $widget['id'] }}" action="{{ route('profile.delete-widget', ['id' => $widget['id'], 'dash_id' => $dashboard_info['id']]) }}" method="POST" style="display: inline-block;">
+													@csrf
+													<button type="submit" class="btn btn-sm btn-warning rounded-sm fas fa-trash"></button>
+												</form>
+											</div>
+										</div>
+									</div>
+								</div>
+
+								{{-- Column selector UI (styled box with Select2) --}}
+								<div class="px-3 pb-2">
+									<div id="colWrap-{{ $widget['random_id'] }}" class="col-selector-wrap" style="border:1px solid #ddd;border-radius:6px;padding:10px;">
+										<label class="mb-2" style="font-weight:600;color:#2c3e50;">Select the properties you want to appear on the table</label>
+										<select id="colSelect-{{ $widget['random_id'] }}" class="form-control column-selector" multiple="multiple" style="width:100%" data-server-selected='@json($widget['visible_columns'] ?? [])'>
+											@foreach($widget['table_headings'] as $i => $heading)
+												@php $isSelected = empty($widget['visible_columns']) || in_array($heading, $widget['visible_columns']); @endphp
+												<option value="{{ $heading }}" {{ $isSelected ? 'selected' : '' }}>{{ $heading }}</option>
+											@endforeach
+										</select>
+									</div>
+								</div>
+
+								<div class="card-body">
+									<div class="table-responsive">
+										<table id="table-{{ $widget['random_id'] }}" class="table table-striped" style="z-index: 10;">
+											<thead>
+												<tr>
+													@foreach ($widget['table_headings'] as $heading)
+													<th>{{ $heading }}</th>
+													@endforeach
+												</tr>
+											</thead>
+											<tbody>
+												@foreach ($widget['table'] as $key)
+												<tr>
+													@foreach($key as $value)
+														<td>{{ $value }}</td>
+													@endforeach
+												</tr>
+												@endforeach
+											</tbody>
+										</table>
+										<script>
+											document.addEventListener("DOMContentLoaded", function() {
+												const tableEl = $("#table-{{ $widget['random_id'] }}");
+												// Initialize DataTable if not already
+												const table = tableEl.DataTable();
+												const select = $("#colSelect-{{ $widget['random_id'] }}");
+												// gather header names in order
+												const headers = tableEl.find('thead th').map(function(){ return $(this).text().trim(); }).get();
+												// Initialize Select2 on the column selector
+												if (typeof select.select2 === 'function') {
+													select.select2({
+														placeholder: 'Columns',
+														width: 'resolve',
+														closeOnSelect: false,
+														dropdownParent: $('#colWrap-{{ $widget['random_id'] }}')
+													});
+												}
+												const storeKey = 'tableCols-{{ $widget['random_id'] }}';
+												function applyVisibilityFromSelected(selected){
+													const s = new Set((selected || []).map(String));
+													headers.forEach(function(header, idx){
+														const visible = s.has(header);
+														table.column(idx).visible(visible, false);
+													});
+													table.draw(false);
+												}
+												// Restore from server (preferred) or localStorage
+												try {
+													const serverSelRaw = select.attr('data-server-selected') || '[]';
+													const serverSel = JSON.parse(serverSelRaw);
+													if (Array.isArray(serverSel) && serverSel.length > 0) {
+														select.val(serverSel).trigger('change.select2');
+														applyVisibilityFromSelected(serverSel);
+													} else {
+														const stored = JSON.parse(localStorage.getItem(storeKey) || 'null');
+														if (Array.isArray(stored)) {
+															select.val(stored).trigger('change.select2');
+															applyVisibilityFromSelected(stored);
+														} else {
+															applyVisibilityFromSelected(select.val() || []);
+														}
+													}
+												} catch(e) { /* ignore */ }
+
+												select.on('change', function(){
+													const selected = $(this).val() || [];
+													applyVisibilityFromSelected(selected);
+													try { localStorage.setItem(storeKey, JSON.stringify(selected)); } catch(e){}
+													// Persist server-side
+													fetch('{{ route('profile.save-widget-columns') }}', {
+														method: 'POST',
+														headers: {
+															'Content-Type': 'application/json',
+															'X-CSRF-TOKEN': '{{ csrf_token() }}'
+														},
+														body: JSON.stringify({ widget_id: {{ $widget['id'] }}, columns: selected })
+													}).then(r => { /* optional: check resp */ }).catch(()=>{});
+												});
+											});
+										</script>
+									</div>
+								</div>
+							</div>
+						</div>	
+            	@endif
             @endforeach
-        </div>
-    </div>
+		</div>
+	</div>
+
 	<script>
 		// That sweet sweet moving cards trick
 		document.addEventListener("DOMContentLoaded", function() {
@@ -297,32 +449,33 @@
 			});
 		});
 	</script>
+
 	<script>
 	// Update a Chart.js instance with new labels/datasets
 	function applyChartData(chart, payload) {
-	chart.data.labels = payload.labels || [];
-	chart.data.datasets = (payload.datasets || []).map(ds => ({ ...ds }));
-	chart.update();
+		chart.data.labels = payload.labels || [];
+		chart.data.datasets = (payload.datasets || []).map(ds => ({ ...ds }));
+		chart.update();
 	}
 
 	// Call our Laravel endpoint to get a chart's filtered data
 	async function fetchChartDataForWidget(widgetId, bbox) {
-	const res = await fetch('{{ route('dashboard.update-bounds') }}', {
-		method: 'POST',
-		headers: {
-		'Content-Type': 'application/json',
-		'X-CSRF-TOKEN': '{{ csrf_token() }}'
-		},
-		body: JSON.stringify({
-		widget_id: widgetId,
-		bounds: {
-			_northEast: { lat: bbox.north, lng: bbox.east },
-			_southWest: { lat: bbox.south, lng: bbox.west }
-		}
-		})
-	});
-	if (!res.ok) throw new Error('Failed to fetch chart data');
-	return res.json();
+		const res = await fetch('{{ route('dashboard.update-bounds') }}', {
+			method: 'POST',
+			headers: {
+				'Content-Type': 'application/json',
+				'X-CSRF-TOKEN': '{{ csrf_token() }}'
+			},
+			body: JSON.stringify({
+				widget_id: widgetId,
+				bounds: {
+					_northEast: { lat: bbox.north, lng: bbox.east },
+					_southWest: { lat: bbox.south, lng: bbox.west }
+				}
+			})
+		});
+		if (!res.ok) throw new Error('Failed to fetch chart data');
+		return res.json();
 	}
 
 	// If Chart.js isn't ready yet, don't try to update
@@ -330,32 +483,35 @@
 		return (typeof window.Chart !== 'undefined') && (typeof Chart.getChart === 'function');
 	}
 
-	// When any map broadcasts bbox, refresh each chart widget on the page
+	// When any map broadcasts bbox, refresh only the charts linked to that map
 	window.MapBus.addEventListener('map:bbox', async (e) => {
-		if (!chartJsReady()) return; // <-- guard
+		if (!chartJsReady()) return;
 
-		const { bbox } = e.detail;
-
-		// For each chart widget, find its canvas & Chart.js instance
+		const { bbox, sourceWidgetId } = e.detail;
 		const widgets = document.querySelectorAll('.chart-widget[data-widget-id]');
+
 		for (const el of widgets) {
 			const widgetId = el.getAttribute('data-widget-id');
+			const linkId   = el.getAttribute('data-map-link-id') || 'noLink321π';
+
+			// Skip if not linked or linked to a different map
+			if (linkId === 'noLink321π') continue;
+			if (String(linkId) !== String(sourceWidgetId)) continue;
+
 			const canvas = el.querySelector('canvas');
 			if (!canvas) continue;
 			const chart = Chart.getChart(canvas);
 			if (!chart) continue;
 
 			try {
-			const payload = await fetchChartDataForWidget(widgetId, bbox);
-			applyChartData(chart, payload);
+				const payload = await fetchChartDataForWidget(widgetId, bbox);
+				applyChartData(chart, payload);
 			} catch (err) {
-			console.error('Chart update failed for widget', widgetId, err);
+				console.error('Chart update failed for widget', widgetId, err);
 			}
 		}
 	});
 	</script>
-
-
 @endsection
 
 @push('scripts')
@@ -365,7 +521,9 @@
 	<script src="https://cdn.jsdelivr.net/npm/hammerjs@2.0.8"></script>
 	<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom@next"></script>
 	<script src="https://cdn.datatables.net/1.13.8/js/jquery.dataTables.min.js"></script>
+	<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
     <!-- Page Specific JS File -->
 @endpush
+
 
 

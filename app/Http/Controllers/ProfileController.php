@@ -152,14 +152,58 @@ class ProfileController extends Controller
         return redirect()->route('profile.dashboard', ['id' => $dashboard->id]); # Get the new dashboard id we made and go there.
     }
 
-    public function get_file_metadata(Request $request) {
-        $filename = $request->filename;
-	    $get_file = FileUpload::where('filename', '=', $filename)
-		    ->where('user_id', '=', Auth::id())
-		    ->get();
-	    $metadata = json_decode($get_file->value('properties_metadata'), true);
-	    $return_val = ['data' =>  $metadata];
-	    return response()->json($metadata);
+    public function get_file_metadata(Request $request)
+    {
+        $filename = $request->input('filename');
+
+        $geojson = FileUpload::where('user_id', Auth::id())
+            ->where('filename', $filename)
+            ->value('geojson');
+
+        $json = json_decode($geojson, true);
+
+        $x_axis = [];
+        $y_axis = [];
+
+        if (isset($json['features'][0]['properties'])) {
+            // Sample multiple features to avoid nulls in first one
+            $sampleValues = [];
+            foreach (array_slice($json['features'], 0, 10) as $feature) {
+                foreach (($feature['properties'] ?? []) as $key => $value) {
+                    if (!isset($sampleValues[$key]) && $value !== null) {
+                        $sampleValues[$key] = $value;
+                    }
+                }
+            }
+
+            foreach ($sampleValues as $key => $value) {
+                // Gather all values for this property
+                $valuesForKey = [];
+                foreach ($json['features'] as $feature) {
+                    if (isset($feature['properties'][$key])) {
+                        $valuesForKey[] = $feature['properties'][$key];
+                    }
+                }
+
+                // Skip unique identifier-like fields
+                if (count(array_unique($valuesForKey)) === count($valuesForKey)) {
+                    continue; // all values are unique (like OBJECTID)
+                }
+
+                // Add to x and y lists
+                $x_axis[] = $key; // any property can be x-axis
+                if (is_numeric($value)) {
+                    $y_axis[] = $key; // only numeric props for y-axis
+                }
+            }
+        }
+
+        return response()->json([
+            'x_axis' => $x_axis,
+            'y_axis' => $y_axis
+        ]);
     }
+
+
     
 }

@@ -29,6 +29,7 @@ Route::middleware(['auth'])->group(function () {
     Route::post('/profile/delete-dashboard/{id}', [App\Http\Controllers\DashboardController::class, 'delete_dashboard'])->name('profile.delete-dashboard');
     Route::post('/profile/get-file-metadata', [App\Http\Controllers\ProfileController::class, 'get_file_metadata']);
     Route::get('/profile/get-geojson/{filename}', [App\Http\Controllers\DashboardController::class, 'get_geojson'])->name('profile.get-geojson');
+    Route::post('/profile/widget-columns', [App\Http\Controllers\DashboardController::class, 'saveWidgetColumns'])->name('profile.save-widget-columns');
 
     Route::get('/hakakses', [App\Http\Controllers\HakaksesController::class, 'index'])->name('hakakses.index')->middleware('superadmin');
     Route::get('/hakakses/edit/{id}', [App\Http\Controllers\HakaksesController::class, 'edit'])->name('hakakses.edit')->middleware('superadmin');

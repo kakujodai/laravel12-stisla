@@ -887,8 +887,10 @@ tr:first-child > td > .fc-day-grid-event {
   padding-right: 10px;
 }
 .select2-container--default .select2-selection--multiple .select2-selection__choice__remove {
-  margin-right: 5px;
   color: #fff;
+  margin-right: 8px;
+  margin-left: 2px;
+  font-weight: bold;
 }
 
 .select2-container--default .select2-selection--multiple .select2-selection__choice,
