@@ -506,6 +506,9 @@
 			try {
 				const payload = await fetchChartDataForWidget(widgetId, bbox);
 				applyChartData(chart, payload);
+				if (payload.category_warning) {
+    				alert("WARNING: This chart had too many categories, so only the first 100 are shown for readability.");
+				}
 			} catch (err) {
 				console.error('Chart update failed for widget', widgetId, err);
 			}
