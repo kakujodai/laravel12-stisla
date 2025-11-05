@@ -91,7 +91,7 @@
 				// global map event bus
 				window.MapBus = new EventTarget();
 				function mapGetBBox(map) {
-    				const b = map.getBounds();
+    				var b = map.getBounds();
     				return {
     	    			south: b.getSouthWest().lat,
     	    			west:  b.getSouthWest().lng,
@@ -196,7 +196,7 @@
   								}
 
 								function broadcastBBox() {
-    								const bbox = mapGetBBox(map{{ $widget['random_id'] }});
+    								var bbox = mapGetBBox(map{{ $widget['random_id'] }});
     								window.MapBus.dispatchEvent(new CustomEvent('map:bbox', {
         								detail: {
             								bbox,
@@ -206,11 +206,11 @@
     								}));
 								}
 
-								// Debounce the pan/zoom broadcasts
-								const debouncedBroadcast = debounce(broadcastBBox, 200);
+								// Debounce the pan/zoom broadcasts so we don't hammer the server
+								var debouncedBroadcast{{ $widget['random_id'] }} = debounce(broadcastBBox, 200);
 								map{{ $widget['random_id'] }}.on('moveend zoomend', () => {
     								saveMapView{{ $widget['random_id'] }}(); // persist on every move/zoom
-    								debouncedBroadcast();
+    								debouncedBroadcast{{ $widget['random_id'] }}();
   								});
 
 								// After the GeoJSON loads, fit/restore and broadcast once
@@ -459,23 +459,24 @@
 	}
 
 	// Call our Laravel endpoint to get a chart's filtered data
-	async function fetchChartDataForWidget(widgetId, bbox) {
-		const res = await fetch('{{ route('dashboard.update-bounds') }}', {
-			method: 'POST',
-			headers: {
-				'Content-Type': 'application/json',
-				'X-CSRF-TOKEN': '{{ csrf_token() }}'
-			},
-			body: JSON.stringify({
-				widget_id: widgetId,
-				bounds: {
-					_northEast: { lat: bbox.north, lng: bbox.east },
-					_southWest: { lat: bbox.south, lng: bbox.west }
-				}
-			})
-		});
-		if (!res.ok) throw new Error('Failed to fetch chart data');
-		return res.json();
+	async function fetchChartDataForWidget(widgetId, mapId, bbox) {
+	var res = await fetch('{{ route('dashboard.update-bounds') }}', {
+		method: 'POST',
+		headers: {
+		'Content-Type': 'application/json',
+		'X-CSRF-TOKEN': '{{ csrf_token() }}'
+		},
+		body: JSON.stringify({
+		widget_id: widgetId,
+		map_id: mapId,
+		bounds: {
+			_northEast: { lat: bbox.north, lng: bbox.east },
+			_southWest: { lat: bbox.south, lng: bbox.west }
+		}
+		})
+	});
+	if (!res.ok) throw new Error('Failed to fetch chart data ' + mapID);
+	return res.json();
 	}
 
 	// If Chart.js isn't ready yet, don't try to update
@@ -487,7 +488,10 @@
 	window.MapBus.addEventListener('map:bbox', async (e) => {
 		if (!chartJsReady()) return;
 
-		const { bbox, sourceWidgetId } = e.detail;
+		var { bbox } = e.detail;
+		var mapID = e.detail.sourceWidgetId;
+
+		// For each chart widget, find its canvas & Chart.js instance
 		const widgets = document.querySelectorAll('.chart-widget[data-widget-id]');
 
 		for (const el of widgets) {
@@ -502,9 +506,9 @@
 			if (!canvas) continue;
 			const chart = Chart.getChart(canvas);
 			if (!chart) continue;
-
 			try {
-				const payload = await fetchChartDataForWidget(widgetId, bbox);
+				const payload = await fetchChartDataForWidget(widgetId, mapID, bbox);
+				if(payload.labels == 'dont') continue;
 				applyChartData(chart, payload);
 				if (payload.category_warning) {
     				alert("WARNING: This chart had too many categories, so only the first 100 are shown for readability.");

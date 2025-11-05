@@ -44,7 +44,7 @@ class DashboardController extends Controller
             if ($get_widget['widget_type_id'] == 1) {
                 if ($get_map_filename) {
                     $get_widget['map_json'] = Storage::get("users/{$userId}/{$get_map_filename}");
-                    $get_widget['random_id'] = Str::random();
+                    $get_widget['random_id'] = $get_widget['id'];
                     $get_widget['filename']  = preg_replace('/[^A-Za-z0-9\_\.]/', '', basename($get_map_filename));
                 }
             }
@@ -287,6 +287,7 @@ class DashboardController extends Controller
     public function updateBounds(Request $request) {
         $request->validate([
             'widget_id' => ['required', 'integer'],
+            'map_id' => ['required', 'integer'],
             'bounds' => ['required', 'array'],
             'bounds._northEast.lat' => ['required', 'numeric'],
             'bounds._northEast.lng' => ['required', 'numeric'],
@@ -299,6 +300,8 @@ class DashboardController extends Controller
             ->where('id', $request->integer('widget_id'))
             ->firstOrFail();
 
+        $labels = array(); //trust me here
+        // Map widgets don't have x/y axes; only charts (2..4) are refreshable here
         if (!($widget->widget_type_id > 1 && $widget->widget_type_id <= 4)) {
             return response()->json(['labels' => [], 'datasets' => []]);
         }
@@ -308,8 +311,13 @@ class DashboardController extends Controller
         $yAxis = $meta['y_axis'] ?? null;
         $mapFilename = $meta['map_filename'] ?? null;
 
-        if (!$xAxis || !$yAxis || !$mapFilename || (($meta['mapLinkID'] ?? 'noLink321π') === 'noLink321π')) {
-            return response()->json(['labels' => [], 'datasets' => []]);
+        // don't want to link to this
+        if(($meta['mapLinkID'] != $request->map_id))
+            return response()->json(['labels' => 'dont']);
+
+        // if we don't have an axis
+        if (!$xAxis || !$yAxis || !$mapFilename) {
+            return response()->json(['labels' => [], 'datasets' => ['backgroundColor' => $this->getColorArray($widget, $labels)]]);
         }
 
         $geo = FileUpload::where('filename', $mapFilename)
@@ -379,16 +387,21 @@ class DashboardController extends Controller
     }
 
     private function getColorArray($widgetFile, $labels){
-        $metadata = json_decode($widgetFile['metadata'], true);
+        $metadata = json_decode($widgetFile->metadata, true);
 
         // initialize color map if there isn't one
-        if (!array_key_exists('colorMap', $metadata)) {   // <-- key check
-            $metadata['colorMap'] = [];
-            $defaultColors = ['#FF692A', '#05DF72', '#8E51FF', '#E12AFB', '#FFD230'];
-            foreach ($labels as $key) {
-                $metadata['colorMap'][$key] = $defaultColors[count($metadata['colorMap']) % count($defaultColors)];
-            }
-            $widgetFile->metadata = json_encode($metadata);
+        if(!array_key_exists('colorMap', $metadata)){
+            $metadata['colorMap'] = array();
+            if(is_array($labels)){
+                $defaultColors = ['#FF692A', '#05DF72', '#8E51FF', '#E12AFB', '#FFD230'];// default colors
+                foreach($labels as $key)//give all the labels a 'default' color
+                    if(!array_key_exists($key, $metadata['colorMap']))
+                        $metadata['colorMap'][$key] = $defaultColors[sizeof($metadata['colorMap']) % sizeof($defaultColors)];
+            
+                //$metadata['colorMap'][$labels[0]] = '#31220b';//testing testing
+                }
+
+            $widgetFile->metadata = json_encode($metadata, true);
             $widgetFile->save();
         }
 
@@ -400,11 +413,56 @@ class DashboardController extends Controller
         return $metadata['colorMap'];
     }
 
+    // public function that returns an associative array of widget colors, key => color 
+    // filtering with key array is optional
+    public function getWidgetColors(Request $request){
+        $request->validate([
+            'widget_id' => ['required', 'integer'],
+        ]);
+        $userId = Auth::id();
+        // 1) Find the widget and ensure it belongs to the user
+        $widget = DashboardWidget::where('user_id', $userId)
+            ->where('id', $request->integer('widget_id'))
+            ->firstOrFail();
+        return response()->json(json_encode(getColorArray($widget, $request->keys), true));
+    }
+    // public function to call when you want to change a color in metadata['colorMap']
+    public function changeColor(Request $request){
+        $request->validate([
+            'widget_id' => ['required', 'integer'],
+            'key' => ['required', 'string'],
+            'color' => ['required', 'string'],
+        ]);
 
-    private function featureRepresentativePoint(array $feature): ?array
-    {
-        $geom = $feature['geometry'] ?? null;
-        if (!$geom || !isset($geom['type'])) return null;
+        $userId = Auth::id();
+
+        // 1) Find the widget and ensure it belongs to the user
+        $widget = DashboardWidget::where('user_id', $userId)
+            ->where('id', $request->widget_id)
+            ->firstOrFail();
+
+        $meta = json_decode($widget->metadata, true);
+        $color = $request->string('color');
+        $key = $request->string('key');
+
+        //key exists in array and our requested color is in fact a hex code
+        if(array_key_exists($key, $meta['colorMap']) && (preg_match('/^#[a-f0-9]{6}$/i', $color)))
+            $meta['colorMap'][$key] = $color;
+
+        $widget->metadata = json_encode($meta, true);
+        $widget->save();
+    }
+
+/**
+ * Representative point for a feature.
+ * - Point → that point.
+ * - Polygon/MultiPolygon → first ring’s first coord (simple/fast).
+ *   (For production accuracy, compute real centroid/intersection or use PostGIS.)
+ */
+private function featureRepresentativePoint(array $feature): ?array
+{
+    $geom = $feature['geometry'] ?? null;
+    if (!$geom || !isset($geom['type'])) return null;
 
         if ($geom['type'] === 'Point') {
             $c = $geom['coordinates'] ?? null;
