@@ -399,7 +399,7 @@ class DashboardController extends Controller
                         $metadata['colorMap'][$key] = $defaultColors[sizeof($metadata['colorMap']) % sizeof($defaultColors)];
             
                 //$metadata['colorMap'][$labels[0]] = '#31220b';//testing testing
-                }
+            }
 
             $widgetFile->metadata = json_encode($metadata, true);
             $widgetFile->save();
@@ -407,7 +407,8 @@ class DashboardController extends Controller
 
         if (is_array($labels)) {
             $curatedColor = [];
-            foreach ($labels as $key) $curatedColor[] = $metadata['colorMap'][$key] ?? '#999';
+            foreach ($labels as $key) 
+                $curatedColor[] = $metadata['colorMap'][$key] ?? '#999';
             return $curatedColor;
         }
         return $metadata['colorMap'];

@@ -500,7 +500,7 @@
 
 			// Skip if not linked or linked to a different map
 			if (linkId === 'noLink321π') continue;
-			if (String(linkId) !== String(sourceWidgetId)) continue;
+			if (String(linkId) !== String(mapID)) continue;
 
 			const canvas = el.querySelector('canvas');
 			if (!canvas) continue;
