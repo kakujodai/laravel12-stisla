@@ -208,10 +208,13 @@
 
 								// Debounce the pan/zoom broadcasts
 								const debouncedBroadcast = debounce(broadcastBBox, 200);
+								// Don't persist map view until GeoJSON data has loaded — avoids saving transient 0,0 from resizes
+								let mapDataLoaded{{ $widget['random_id'] }} = false;
 								map{{ $widget['random_id'] }}.on('moveend zoomend', () => {
-    								saveMapView{{ $widget['random_id'] }}(); // persist on every move/zoom
-    								debouncedBroadcast();
-  								});
+									if (!mapDataLoaded{{ $widget['random_id'] }}) return;
+									saveMapView{{ $widget['random_id'] }}(); // persist on every move/zoom
+									debouncedBroadcast();
+								});
 
 								// After the GeoJSON loads, fit/restore and broadcast once
 								{{ pathinfo($widget['filename'], PATHINFO_FILENAME); }}{{ $widget['random_id'] }}.on('data:loaded', function () {
@@ -231,6 +234,8 @@
 
 									// broadcast once
 									broadcastBBox();
+									// Mark the map as loaded so user interactions save correctly
+									mapDataLoaded{{ $widget['random_id'] }} = true;
 								});
 
 								const resizeObserver{{ $widget['random_id'] }} = new ResizeObserver(() => {
