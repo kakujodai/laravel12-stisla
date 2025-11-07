@@ -185,22 +185,22 @@ class ProfileController extends Controller
                     }
                 }
 
-                // Skip unique identifier-like fields
-                if (count(array_unique($valuesForKey)) === count($valuesForKey)) {
-                    continue; // all values are unique (like OBJECTID)
+                // Add to x and y lists. For x/y we skip fully-unique identifier-like fields
+                if (count(array_unique($valuesForKey)) !== count($valuesForKey)) {
+                    $x_axis[] = $key; // any non-unique property can be x-axis
                 }
-
-                // Add to x and y lists
-                $x_axis[] = $key; // any property can be x-axis
                 if (is_numeric($value)) {
                     $y_axis[] = $key; // only numeric props for y-axis
                 }
             }
+            // Also return all available property keys for table selection (including unique IDs)
+            $table_columns = array_keys($sampleValues);
         }
 
         return response()->json([
             'x_axis' => $x_axis,
-            'y_axis' => $y_axis
+            'y_axis' => $y_axis,
+            'table_columns' => $table_columns ?? []
         ]);
     }
 

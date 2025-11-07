@@ -113,9 +113,10 @@
         function update_table_select(filename) {
             $.post('/profile/get-file-metadata', { filename }).done(function (response) {
                 const $sel = $('#table_columns');
-                $sel.empty();
-                $.each((response.x_axis || []), function(_, v) {
-                    $sel.append(`<option value="${v}">${v}</option>`);
+                    $sel.empty(); // Nuke the current select options
+                    // Populate with all table columns (including unique ids)
+                    $.each(response.table_columns || [], function(i, value) {
+                        $sel.append(`<option value="${value}">${value}</option>`);
                 });
                 // refresh select2 choices (keeps chip UI)
                 $sel.trigger('change.select2');

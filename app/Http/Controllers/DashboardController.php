@@ -117,8 +117,8 @@ class DashboardController extends Controller
                         }
                     }
 
-                    // Cap category count and mark warning
-                    if (count($values_md) > $maxCategories) {
+                    // Cap category count and mark warning only for pie charts
+                    if ($get_widget['widget_type_id'] == 4 && count($values_md) > $maxCategories) {
                         $values_md = array_slice($values_md, 0, $maxCategories, true);
                         $categoryWarning = true;
                     }
