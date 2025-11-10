@@ -95,6 +95,21 @@ class DashboardController extends Controller
 
                     $json_version = json_decode($geojson ?? '[]', true);
 
+                    // replacing the calculation bits with a call to a function to centralize it all
+                    if (!array_key_exists('norm', $decode_metadata))// backwards compatibility...
+                        $decode_metadata['norm'] = 'NOPE';
+                    if($decode_metadata['norm'] == 'NOPE'){
+                        $results = $this->calculateChartData($decode_metadata['x_axis'], $decode_metadata['y_axis'], $json_version['features'], $get_widget['widget_type_id']);
+                    }
+                    else{
+                        $results = $this->compressDatasets($decode_metadata['norm_axis'], $decode_metadata['norm_calc'], $json_version['features'], 0);
+                    }
+                    $labels = $results['labels'];
+                    $values = $results['values'];
+                    $categoryWarning = $results['catWarning'];
+                    unset($results);// I dunno, feels nice
+
+                    /*
                     $values_md = [];
                     $categoryWarning = false;
                     $maxCategories = 100;
@@ -128,6 +143,7 @@ class DashboardController extends Controller
                         $labels = array_map(static fn($v) => (string)$v, $labels);
                     }
                     $values = array_values($values_md);
+                    */
 
                     $chart_types    = [2 => 'line', 3 => 'bar', 4 => 'pie', 5 => 'table'];
                     $label_location = ($get_widget['widget_type_id'] == 4) ? 'right' : 'top';
@@ -172,8 +188,190 @@ class DashboardController extends Controller
 
         return view('profile.dashboard', $array);
     }
+    private function compressDatasets($inputs, $calculation, $dataset, $toJSON){
+        if(!is_array($inputs) || !is_array($dataset) || !is_string($calculation))
+            return ($returnArr = ['us' => 'fucked']);
 
+        /*
+            $inputs is an array of 'y-axis' or of values to compress
+            $calculation is what operation we want to use to compress the dataset
+            $dataset is the assoc array of the json, so what we get when decoding the json
 
+            output is an assoc array in the format for graphing, with a tuple for each $input
+                $output[$inputs] = $values;
+            if $toJSON is set to not zero then we map it to the format of
+                $output[$inputs]['properties']['condensed'.$toJSON] = $values
+            which keeps it in a 'json' format if we wanna be freaky with it and also keeps track of what value $toJSON is, so we can distinguish between compressed sets if we want to... I dunno, I'm kinda future proofing this with flawed foresight
+
+            operation list: 
+            "average"   - average of all non-Null values
+            "summation" - summation of all non-Null values
+            "count"     - count of all non-Null values
+            "min"       - minimum of all non-Null values
+            "max"       - maximum of all non-Null values
+            (NOT FUNCTIONING PROPERLY)"median"    - median of all non-Null values
+            "presence"  - percentage of tuples with that column (nonNulls / null+nonNulls)
+            // kinda just felt like putting presence in there tbh, might be useful or something
+
+            mildly sorry for the text dump besties <3
+        */
+        $newDataset = array();
+
+        $finalAns = 0;
+        if($calculation == "average")
+            foreach($inputs as $key){
+                // for each of the collumns
+                $count = 0;
+                $average = 0;
+                foreach($dataset as $tuple){
+                    $val = $tuple['properties'][$key] ?? null;
+                    if($val === null) continue;
+                    $count++;//only increasing count here for accurate averages
+                    $average+=$val;
+                }
+                $newDataset[$key] = (double)($average / $count);
+            }
+        else if ($calculation == "summation")
+            foreach($inputs as $key){
+                $sum = 0;
+                foreach($dataset as $tuple){
+                    $val = $tuple['properties'][$key] ?? null;
+                    if($val === null) continue;
+                    $sum+=$val;
+                }
+                $newDataset[$key] = $sum;
+            }
+        else if ($calculation == "count")
+            foreach($inputs as $key){
+                $count = 0;
+                foreach($dataset as $tuple){
+                    $val = $tuple['properties'][$key] ?? null;
+                    if($val === null) continue;
+                    $count++;
+                }
+                $newDataset[$key] = $count;
+            }
+        else if ($calculation == "min")
+            foreach($inputs as $key){
+                $min = 99999999; // f it, just as long as something is smaller...
+                foreach($dataset as $tuple){
+                    $val = $tuple['properties'][$key] ?? null;
+                    if($val === null) continue;
+                    if($val < $min)
+                        $min = $val;
+                }
+                $newDataset[$key] = $min;
+            }
+        else if ($calculation == "min")
+            foreach($inputs as $key){
+                $max = -99999999; // f it, just as long as something is larger...
+                foreach($dataset as $tuple){
+                    $val = $tuple['properties'][$key] ?? null;
+                    if($val === null) continue;
+                    if($val > $max)
+                        $max = $val;
+                }
+                $newDataset[$key] = $max;
+            }
+        // median does not work as the datasets are not sorted...
+        else if ($calculation == "median") // this one isn't going to look pretty...
+            foreach($inputs as $key){
+                $count = 0;
+                foreach($dataset as $tuple){ // get number of datapoints
+                    $val = $tuple['properties'][$key] ?? null;
+                    if($val === null) continue;
+                    $count++;
+                }
+                foreach($dataset as $tuple){ // find the "center" datapoint?
+                    $val = $tuple['properties'][$key] ?? null;
+                    if($val === null) continue;
+                    $count -= 2;
+                    if($count == 0)
+                        $eval = $val;
+                    else if($count == -2){
+                        $eval = ($eval + $val)/2;
+                        break;
+                    }
+                    else if($count == -1){
+                        $eval = $val;
+                        break;
+                    }
+                }
+                $newDataset[$key] = $eval;
+            }
+        else if ($calculation == "presence"){
+            foreach($inputs as $key){
+                $count = 0;
+                $truecount = 0;
+                foreach($dataset as $tuple){
+                    $val = $tuple['properties'][$key] ?? null;
+                    $truecount++;
+                    if($val === null) continue;
+                    $count++;
+                }
+                $newDataset[$key] = $count / $truecount;
+            }
+        }
+        if($toJSON != 0) {
+            $tempSet = array();
+            foreach ($newDataset as $key => $value)
+                $tempSet[$key]['properties'][('condensed'.$toJSON)][$value];
+            $newDataset = $tempSet;
+        }
+        else {
+            $compresedResult = [
+                'labels' => array_keys($newDataset),
+                'values' => array_values($newDataset),
+                'catWarning' => false,
+            ];
+            $newDataset = $compresedResult;
+        }
+        return $newDataset;
+    }
+
+    // $datasets is the assoc array of json btw
+    private function calculateChartData($x_axis, $y_axis, $datasets, $widgetTypeId){
+        $values_md = [];
+        $categoryWarning = false;
+        $maxCategories = 100;
+
+        if (($y_axis ?? null) === 'COUNT') {
+            foreach (($datasets ?? []) as $feature) {
+                $xv = $feature['properties'][$x_axis] ?? null;
+                if ($xv === null) continue;
+                $values_md[$xv] = ($values_md[$xv] ?? 0) + 1;
+            }
+        } else {
+            foreach (($datasets ?? []) as $feature) {
+                // make property names case-insensitive
+                $props = array_change_key_case($feature['properties'], CASE_LOWER);
+                $xv = $props[strtolower($x_axis)] ?? null;
+                $yv = $props[strtolower($y_axis)] ?? null;
+
+                if ($xv === null || !is_numeric($yv)) continue;
+                $values_md[$xv] = ($values_md[$xv] ?? 0) + (float)$yv;
+            }
+        }
+
+        // Cap category count and mark warning
+        if (count($values_md) > $maxCategories) {
+            $values_md = array_slice($values_md, 0, $maxCategories, true);
+            $categoryWarning = true;
+        }
+
+        $labels = array_keys($values_md);
+        if ($widgetTypeId == 4)
+            $labels = array_map(static fn($v) => (string)$v, $labels);
+        $values = array_values($values_md);
+
+        $compresedResult = [
+            'labels' => $labels,
+            'values' => $values,
+            'catWarning' => $categoryWarning,
+        ];
+        return $compresedResult;
+
+    }
 
     public function add_widgets($id) {
         $dashboard_info = Dashboard::where('user_id', Auth::id())
@@ -207,12 +405,21 @@ class DashboardController extends Controller
                 'table_columns'   => ['required', 'array', 'min:1'],
                 'table_columns.*' => ['string'],
             ]);
-        } elseif ((int)$request->widget_type !== 1) {
+        } 
+        elseif ((int)$request->widget_type !== 1) {
             $request->validate([
-                'x_axis'    => ['required'],
-                'y_axis'    => ['required'],
-                'mapLinkID' => ['nullable', 'string'],
+                'mapLinkID' => ['required', 'string'],
             ]);
+            if($request->norm_control == "NOPE")
+                $request->validate([
+                    'x_axis'    => ['required'],
+                    'y_axis'    => ['required'],
+                    'mapLinkID' => ['required', 'string'],
+                ]);
+        }
+
+        if($request->norm_control == "YEAH"){ // make an array for our keys
+            $norm_axis = $request->norm_axis;
         }
 
         if (!$request->widget_name) {
@@ -221,9 +428,16 @@ class DashboardController extends Controller
                 ->value('title');
 
             if ((int)$request->widget_type > 1 && (int)$request->widget_type < 5) {
-                $widget_name = ($request->y_axis === 'COUNT')
-                    ? "{$request->y_axis} BY {$request->x_axis}"
-                    : "SUM OF {$request->y_axis} BY {$request->x_axis}";
+                if($request->norm_control == "NOPE"){
+                    $widget_name = ($request->y_axis === 'COUNT')
+                        ? "{$request->y_axis} BY {$request->x_axis}"
+                        : "SUM OF {$request->y_axis} BY {$request->x_axis}";
+                }
+                else{
+                    $widget_name = "{$request->norm_calc} of ";
+                    foreach($norm_axis as $value)
+                        $widget_name = $widget_name . " {$value} ";
+                }
             } else {
                 $widget_name = $title ?? 'Widget';
             }
@@ -244,10 +458,19 @@ class DashboardController extends Controller
                 'map_filename'  => $request->map_filename,
                 'table_columns' => $request->input('table_columns', []),
             ];
-        } else {
+        } else if ($request->norm_control == "YEAH") {
+            $metadata = [
+                'map_filename'  => $request->map_filename,
+                'mapLinkID'     => $request->mapLinkID ?: 'noLink321π',
+                'norm'          => $request->norm_control,
+                'norm_axis'     => $norm_axis,
+                'norm_calc'     => $request->norm_calc,
+            ];
+        } else{
             $metadata = [
                 'x_axis'       => $request->x_axis,
                 'y_axis'       => $request->y_axis,
+                'norm'          => $request->norm_control,
                 'map_filename' => $request->map_filename,
                 'mapLinkID'    => $request->mapLinkID ?: 'noLink321π',
             ];
@@ -300,7 +523,6 @@ class DashboardController extends Controller
             ->where('id', $request->integer('widget_id'))
             ->firstOrFail();
 
-        $labels = array(); //trust me here
         // Map widgets don't have x/y axes; only charts (2..4) are refreshable here
         if (!($widget->widget_type_id > 1 && $widget->widget_type_id <= 4)) {
             return response()->json(['labels' => [], 'datasets' => []]);
@@ -316,7 +538,7 @@ class DashboardController extends Controller
             return response()->json(['labels' => 'dont']);
 
         // if we don't have an axis
-        if (!$xAxis || !$yAxis || !$mapFilename) {
+        if ($meta['norm'] == "NOPE" && (!$xAxis || !$yAxis || !$mapFilename)) {
             return response()->json(['labels' => [], 'datasets' => ['backgroundColor' => $this->getColorArray($widget, $labels)]]);
         }
 
@@ -343,6 +565,18 @@ class DashboardController extends Controller
             if ($this->pointInBounds($pt['lat'], $pt['lng'], $south, $west, $north, $east)) $filtered[] = $f;
         }
 
+        // replacing the calculation bits with a call to a function to centralize it all
+        if(!array_key_exists('norm', $meta))
+            $meta['norm'] = "NOPE";
+        if($meta['norm'] == "NOPE")
+            $results = $this->calculateChartData($xAxis, $yAxis, $filtered, $widget['widget_type_id']);
+        else
+            $results = $this->compressDatasets($meta['norm_axis'], $meta['norm_calc'], $filtered, 0);
+        $labels = $results['labels'];
+        $values = $results['values'];
+        $categoryWarning = $results['catWarning'];
+        unset($results);// I dunno, feels nice
+        /*
         $values_md = [];
         $categoryWarning = false;
         $maxCategories = 100;
@@ -370,6 +604,7 @@ class DashboardController extends Controller
 
         $labels = array_keys($values_md);
         $values = array_values($values_md);
+        */
 
         return response()->json([
             'labels' => $labels,
@@ -395,12 +630,10 @@ class DashboardController extends Controller
             if(is_array($labels)){
                 $defaultColors = ['#FF692A', '#05DF72', '#8E51FF', '#E12AFB', '#FFD230'];// default colors
                 foreach($labels as $key)//give all the labels a 'default' color
-                    if(!array_key_exists($key, $metadata['colorMap']))
-                        $metadata['colorMap'][$key] = $defaultColors[sizeof($metadata['colorMap']) % sizeof($defaultColors)];
+                    $metadata['colorMap'][$key] = $defaultColors[sizeof($metadata['colorMap']) % sizeof($defaultColors)];
             
                 //$metadata['colorMap'][$labels[0]] = '#31220b';//testing testing
             }
-
             $widgetFile->metadata = json_encode($metadata, true);
             $widgetFile->save();
         }

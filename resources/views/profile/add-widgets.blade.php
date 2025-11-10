@@ -57,15 +57,46 @@
 
                             {{-- Chart controls --}}
                             <div id="chart_forms" class="form-group" style="display:none;">
-                                <label for="x_axis">Select the property you want to use on the x axis.</label>
-                                <select class="form-control mb-2" id="x_axis" name="x_axis">
-                                    <option value="">Loading..</option>
-                                </select>
+                                <label for="norm_control">Select whether or not to normalize multiple values.</label>
+                                    <select class="form-control mb-2" id="norm_control" name="norm_control">
+                                        <option value="NOPE">Do not normalize</option>
+                                        <option value="YEAH">Normalize multiple values</option>
+                                    </select>
 
-                                <label for="y_axis">Select the property you want to use on the y axis.</label>
-                                <select class="form-control mb-2" id="y_axis" name="y_axis">
-                                    <option value="">Loading..</option>
+                                <div id="x_axis_group" class="form-group" stype="display:none;">
+                                    <label for="x_axis">Select the property you want to use on the x axis.</label>
+                                    <select class="form-control mb-2" id="x_axis" name="x_axis">
+                                        <option value="">Loading..</option>
+                                    </select>
+                                </div>
+
+                                <div id="y_axis_group" class="form-group" stype="display:none;">
+                                    <label for="y_axis">Select the property you want to use on the y axis.</label>
+                                    <select class="form-control mb-2" id="y_axis" name="y_axis">
+                                        <option value="">Loading..</option>
+                                    </select>
+                                </div>
                                 </select>
+                                <label for="mapLinkID">Decide which map widget to link to</label>
+			                    <select class="form-control mb-2" type="select" id="mapLinkID" name="mapLinkID">
+                                    <option value="noLink321π">No Linking</option>
+                                    @foreach ($mapWidgets as $mapWidget)
+                                    <option value="{{ array_keys($mapWidgets, $mapWidget, true)[0] }}">{{ $mapWidget }}</option>
+                                    @endforeach
+			                    </select>
+                                <div id="norm_form" class="form-group" stype="display:none;">
+                                    <label for="norm_calc">Select which operation to join with.</label>
+                                    <select class="form-control mb-2" id="norm_calc" name="norm_calc">
+                                        <option value="average">Average</option>
+                                        <option value="count">Count</option>
+                                        <option value="max">Max</option>
+                                        <option value="min">Min</option>
+                                        <option value="summation">Summation</option>
+                                    </select>
+                                    <div id="norm_form1" class="form-group" stype="display:none;">
+                                        <label for="vars">Loading...</label><br>
+                                    </div>
+                                </div>
                             </div>
 
                             {{-- Table controls (multi-select w/ Select2 chips) --}}
@@ -123,6 +154,16 @@
             });
         }
 
+        function update_normalization_select(filename){
+            const $sel = $('#norm_form1');
+            update_axis_select(filename);
+            $sel.empty();
+            $('#norm_form1').append(`<label for="vars">Select which variables to join</label><br>`);
+            $.post('/profile/get-file-metadata', { filename }).done(function (response) {
+                $.each(response.y_axis || [], function(_, v){ $('#norm_form1').append(`<input type="checkbox" name="norm_axis[]" value="${v}"> ${v} <br>`); });
+            });
+        }
+
         // initialize Select2
         $('#table_columns').select2({
             placeholder: 'Select table properties',
@@ -143,6 +184,7 @@
             } else { // charts
                 $("#table_column").hide('slow');
                 $("#chart_forms").show('slow');
+                $("#norm_form").hide('slow');
                 update_axis_select($('#map_filename').val());
             }
         });
@@ -152,6 +194,25 @@
             // refresh both sets; the visible block will show the right one
             update_axis_select(file);
             update_table_select(file);
+            update_normalization_select(file);
+        });
+
+        $('#norm_control').on('change', function () {
+            const cont = $(this).val();
+            if(cont == "NOPE"){
+                $("#x_axis_group").show('slow');
+                $("#y_axis_group").show('slow');
+                $("#norm_form1").hide('slow');
+                $("#norm_form").hide('slow');
+            }
+            else if(cont == "YEAH"){
+                $("#x_axis_group").hide('slow');
+                $("#y_axis_group").hide('slow');
+                $("#norm_form1").show('slow');
+                $("#norm_form").show('slow');
+                update_axis_select($('#map_filename').val());
+                update_normalization_select($('#map_filename').val());
+            }
         });
 
         $('#widget_type').trigger('change');
