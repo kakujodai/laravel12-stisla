@@ -196,7 +196,7 @@
   								}
 
 								function broadcastBBox() {
-    								var bbox = mapGetBBox(map{{ $widget['random_id'] }});
+    								const bbox = mapGetBBox(map{{ $widget['random_id'] }});
     								window.MapBus.dispatchEvent(new CustomEvent('map:bbox', {
         								detail: {
             								bbox,
@@ -207,13 +207,13 @@
 								}
 
 								// Debounce the pan/zoom broadcasts
-								const debouncedBroadcast = debounce(broadcastBBox, 200);
+								var debouncedBroadcast{{ $widget['random_id'] }} = debounce(broadcastBBox, 200);
 								// Don't persist map view until GeoJSON data has loaded — avoids saving transient 0,0 from resizes
 								let mapDataLoaded{{ $widget['random_id'] }} = false;
 								map{{ $widget['random_id'] }}.on('moveend zoomend', () => {
 									if (!mapDataLoaded{{ $widget['random_id'] }}) return;
 									saveMapView{{ $widget['random_id'] }}(); // persist on every move/zoom
-									debouncedBroadcast();
+									debouncedBroadcast{{ $widget['random_id'] }}();
 								});
 
 								// After the GeoJSON loads, fit/restore and broadcast once
@@ -480,7 +480,7 @@
 		}
 		})
 	});
-	if (!res.ok) throw new Error('Failed to fetch chart data ' + mapID);
+	if (!res.ok) throw new Error('Failed to fetch chart data ' + widgetId + ' ' + mapId);
 	return res.json();
 	}
 

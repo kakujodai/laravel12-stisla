@@ -510,7 +510,7 @@ class DashboardController extends Controller
     public function updateBounds(Request $request) {
         $request->validate([
             'widget_id' => ['required', 'integer'],
-            'map_id' => ['required', 'integer'],
+            'map_id' => ['required'],
             'bounds' => ['required', 'array'],
             'bounds._northEast.lat' => ['required', 'numeric'],
             'bounds._northEast.lng' => ['required', 'numeric'],
@@ -538,6 +538,8 @@ class DashboardController extends Controller
             return response()->json(['labels' => 'dont']);
 
         // if we don't have an axis
+        if(!array_key_exists('norm', $meta))
+            $meta['norm'] = "NOPE";
         if ($meta['norm'] == "NOPE" && (!$xAxis || !$yAxis || !$mapFilename)) {
             return response()->json(['labels' => [], 'datasets' => ['backgroundColor' => $this->getColorArray($widget, $labels)]]);
         }
@@ -566,8 +568,6 @@ class DashboardController extends Controller
         }
 
         // replacing the calculation bits with a call to a function to centralize it all
-        if(!array_key_exists('norm', $meta))
-            $meta['norm'] = "NOPE";
         if($meta['norm'] == "NOPE")
             $results = $this->calculateChartData($xAxis, $yAxis, $filtered, $widget['widget_type_id']);
         else
@@ -609,7 +609,7 @@ class DashboardController extends Controller
         return response()->json([
             'labels' => $labels,
             'datasets' => [[
-                'label' => $xAxis,
+                'label' => $labels,
                 'data'  => $values,
                 'fill'  => true,
                 'pointRadius' => 0,
