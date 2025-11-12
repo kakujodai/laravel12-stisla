@@ -11,4 +11,20 @@ class FileUpload extends Model
     {
         return $this->hasMany(GeoFeature::class);
     }
+    // Allow assignment for fields
+    protected $fillable = [
+        'user_id',
+        'filename',
+        'geojson',
+        'properties_metadata',
+        'geometry_metadata',
+        'md5',
+        'title',
+    ];
+
+    // Cast JSON columns to PHP arrays
+    protected $casts = [
+        'properties_metadata' => 'array',
+        'geometry_metadata'   => 'array',
+    ];
 }

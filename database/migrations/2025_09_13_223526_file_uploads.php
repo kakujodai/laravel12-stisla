@@ -16,6 +16,7 @@ return new class extends Migration
             $table->json('geojson');
             $table->string('md5');
             $table->json('properties_metadata');
+            $table->json('geometry_metadata');
             $table->timestamps();
         });
     }

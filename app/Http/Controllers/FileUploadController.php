@@ -56,6 +56,67 @@ private function safeDecodeJson(string $raw): array
         return [$fallback, $decoded2];
     }
 
+   
+ //Function to extract properties and geometry metadata from a GeoJSON file
+private function extractGeojsonMetadata(array $geojson): array
+{
+    $metadata = [
+        'x_axis' => [],
+        'y_axis' => [],
+    ];
+
+    $geometry_metadata = [
+        'features' => [],
+    ];
+
+    if (empty($geojson['features']) || !is_array($geojson['features'])) {
+        return [$metadata, $geometry_metadata];
+    }
+
+    foreach ($geojson['features'] as $feature) {
+        $featureData = [];
+
+        // Read in Geometry and its features
+        if (!empty($feature['geometry'])) {
+            $geom = $feature['geometry'];
+            $featureData['geometry_type'] = $geom['type'] ?? null;
+            $featureData['coordinates']   = $geom['coordinates'] ?? null;
+        }
+
+        // Read in Properties
+        if (!empty($feature['properties']) && is_array($feature['properties'])) {
+            $featureData['properties'] = $feature['properties'];
+
+            // Collect axis metadata
+            foreach ($feature['properties'] as $key => $value) {
+                if (!in_array($key, $metadata['x_axis'])) {
+                    $metadata['x_axis'][] = $key;
+                }
+                if (is_numeric($value) && !in_array($key, $metadata['y_axis'])) {
+                        $metadata['y_axis'][] = $key;
+                }
+            }
+
+                // Detect color fields if they exist
+                $colorValue = $feature['properties']['color'] ?? 
+                $feature['properties']['color_value'] ?? 
+                $feature['properties']['color_hex'] ?? 
+                $feature['properties']['colour'] ?? 
+                $feature['properties']['colour_value'] ??
+                 null;
+                if ($colorValue) {
+                    $featureData['color'] = $colorValue;
+                }
+        }
+
+        $geometry_metadata['features'][] = [$featureData['geometry_type'], $featureData['coordinates'], $featureData['color'] ?? null];
+    }
+    array_unshift($geometry_metadata['features'], ['geometry_type', 'coordinates', 'color']);
+
+    return [$metadata, $geometry_metadata];
+}
+
+
 public function upload(Request $request)
     {
         $request->validate([
@@ -72,7 +133,6 @@ public function upload(Request $request)
         $filename        = preg_replace('/[^A-Za-z0-9_.]/', '', basename($file->getClientOriginalName()));
         $file_extension  = pathinfo($filename, PATHINFO_EXTENSION);
         $filename_only   = pathinfo($filename, PATHINFO_FILENAME);
-        $geojson_metadata = [];
 
         if (!FileUpload::where('filename', '=', $filename)->where('user_id', '=', $userId)->exists()) {
             if (Storage::putFileAs($path, $file, $filename)) {
@@ -88,21 +148,15 @@ public function upload(Request $request)
                     }
 
                     // Build simple chart metadata using first feature’s properties (if present)
-                    if (!empty($json['features'][0]['properties']) && is_array($json['features'][0]['properties'])) {
-                        foreach ($json['features'][0]['properties'] as $key => $value) {
-                            $geojson_metadata['x_axis'][] = $key;
-                            if (is_numeric($value)) {
-                                $geojson_metadata['y_axis'][] = $key;
-                            }
-                        }
-                    }
+                    [$metadata, $geometry_metadata] = $this->extractGeojsonMetadata($json);
 
                     // Save
                     $file_upload                     = new FileUpload;
                     $file_upload->user_id            = $userId;
                     $file_upload->filename           = $filename;
                     $file_upload->geojson            = $clean; // store normalized text
-                    $file_upload->properties_metadata= json_encode($geojson_metadata);
+                    $file_upload->properties_metadata= $metadata;
+                    $file_upload->geometry_metadata  = $geometry_metadata;
                     $file_upload->md5                = md5_file($filePath);
                     $file_upload->title              = $title;
                     $file_upload->save();
@@ -144,20 +198,15 @@ public function upload(Request $request)
                             [$clean_layer, $json_layer] = $this->safeDecodeJson($raw_layer);
 
                             $geojson_metadata = []; // reset per layer
-                            if (is_array($json_layer) && !empty($json_layer['features'][0]['properties']) && is_array($json_layer['features'][0]['properties'])) {
-                                foreach ($json_layer['features'][0]['properties'] as $key => $value) {
-                                    $geojson_metadata['x_axis'][] = $key;
-                                    if (is_numeric($value)) {
-                                        $geojson_metadata['y_axis'][] = $key;
-                                    }
-                                }
-                            }
+                            // Build simple chart metadata using first feature’s properties (if present)
+                            [$metadata, $geometry_metadata] = $this->extractGeojsonMetadata($json);
 
                             $file_upload                      = new FileUpload;
                             $file_upload->user_id             = $userId;
                             $file_upload->filename            = $geojson_filename_basename;
                             $file_upload->geojson             = $clean_layer;
-                            $file_upload->properties_metadata = json_encode($geojson_metadata);
+                            $file_upload->properties_metadata = $metadata;
+                            $file_upload->geometry_metadata   = $geometry_metadata;
                             $file_upload->md5                 = md5_file($filePath);
                             $file_upload->title               = "$final_output";
                             $file_upload->save();
@@ -217,7 +266,8 @@ public function upload(Request $request)
                             $file_upload->user_id             = $userId;
                             $file_upload->filename            = $geojson_filename_basename;
                             $file_upload->geojson             = $clean_layer;
-                            $file_upload->properties_metadata = json_encode($geojson_metadata);
+                            $file_upload->properties_metadata = $metadata;
+                            $file_upload->geometry_metadata   = $geometry_metadata;
                             $file_upload->md5                 = md5_file($filePath);
                             $file_upload->title               = "$final_output (L$layer)";
                             $file_upload->save();
@@ -253,6 +303,7 @@ public function upload(Request $request)
         }
     }
 
+<<<<<<< Updated upstream
     //Function to get GeoJSON Feature Collection by FileUpload ID
     public function toFeatureCollection($id)
     {
@@ -278,4 +329,17 @@ public function upload(Request $request)
         return response()->json($geojson);
     }
 
+=======
+    //Function to get GeoJSON data/metadata
+    public function getGeojsonMetadata($fileUploadId)
+    {
+        $fileUpload = FileUpload::findorFail($fileUploadId);
+
+        return response()->json([
+            'geojson' => json_decode($fileUpload->geojson, true),
+            'properties_metadata' => $fileUpload->properties_metadata,
+            'geometry_metadata' => $fileUpload->geometry_metadata,
+        ]);
+    }
+>>>>>>> Stashed changes
 }

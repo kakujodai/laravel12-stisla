@@ -45,12 +45,28 @@ class DashboardController extends Controller
             $decode_metadata = json_decode($get_widget['metadata'], true);
             $get_map_filename = $decode_metadata['map_filename'];
 
-            if ($get_widget['widget_type_id'] == 1) { # I'm the map i'm the map (he's the map he's the map) I'M THE MAP!!
-                $get_widget['map_json'] = Storage::get("users/{$userId}/{$get_map_filename}");
-		        $get_widget['random_id'] = Str::random();
-		        $get_widget['filename'] = preg_replace('/[^A-Za-z0-9\_\.]/', '', basename($get_map_filename));
-            } elseif ($get_widget['widget_type_id'] > 1 && $get_widget['widget_type_id'] <= 4) { # Handle Charts
-                $values = [];
+            $decode_metadata = json_decode($get_widget['metadata'], true) ?: [];
+            $get_map_filename = $decode_metadata['map_filename'] ?? null;
+
+            if ($get_widget['widget_type_id'] == 1) {   // MAP!
+                if ($get_map_filename) {
+                    $get_widget['map_json'] = Storage::get("users/{$userId}/{$get_map_filename}");
+                    $get_widget['random_id'] = $get_widget['id'];
+                    $get_widget['filename']  = preg_replace('/[^A-Za-z0-9\_\.]/', '', basename($get_map_filename));
+
+                    //Pull metadata for map widget
+                    $fileInfo = FileUpload::select('geometry_metadata', 'properties_metadata')
+                        ->where('user_id', $userId)
+                        ->where('filename', $get_map_filename)
+                        ->first();
+
+                    if ($fileInfo) {
+                        $get_widget['geometry_metadata']  = json_decode($fileInfo->geometry_metadata, true);
+                        $get_widget['properties_metadata'] = json_decode($fileInfo->properties_metadata, true);
+                    }
+                }
+            }
+            elseif ($get_widget['widget_type_id'] == 5) { # TABLE!
                 $geojson = FileUpload::select('geojson')
                     ->where('filename', '=', $get_map_filename)
                     ->where('user_id', '=', $userId)
@@ -59,10 +75,57 @@ class DashboardController extends Controller
 
                 if ($decode_metadata['y_axis'] == 'COUNT') { # Handle Count
                     foreach ($json_version['features'] as $feature) {
-                        if (!isset($values_md[$feature['properties'][$decode_metadata['x_axis']]])) {
-                            $values_md[$feature['properties'][$decode_metadata['x_axis']]] = 1;
-                        } else {
-                            $values_md[$feature['properties'][$decode_metadata['x_axis']]] = $values_md[$feature['properties'][$decode_metadata['x_axis']]] + 1;
+                        $props = $feature['properties'] ?? [];
+                        $row = [];
+                        foreach ($table_keys as $k) {
+                            $row[] = array_key_exists($k, $props) ? $props[$k] : '';
+                        }
+                        $value_md[] = $row;
+                    }
+
+                    $get_widget['random_id'] = Str::random();
+                    $get_widget['table'] = $value_md;
+                    $get_widget['table_headings'] = $table_keys;
+                    $get_widget['visible_columns'] = $decode_metadata['visible_columns'] ?? $table_keys;
+                }
+            }
+            elseif ($get_widget['widget_type_id'] > 1 && $get_widget['widget_type_id'] <= 4) { // CHARTS
+                if ($get_map_filename) {
+                    $geojson = FileUpload::where('filename', $get_map_filename)
+                        ->where('user_id', $userId)
+                        ->value('geojson');
+
+                    $fileInfo = FileUpload::select('geojson', 'geometry_metadata', 'properties_metadata')
+                        ->where('user_id', $userId)
+                        ->where('filename', $get_map_filename)
+                        ->first();
+
+                    if (!$fileInfo) continue;
+
+                    $json_version = json_decode($fileInfo->geojson ?? '[]', true);
+                    $geometry_metadata  = json_decode($fileInfo->geometry_metadata ?? '[]', true);
+                    $properties_metadata = json_decode($fileInfo->properties_metadata ?? '[]', true);
+
+
+                    $values_md = [];
+                    $categoryWarning = false;
+                    $maxCategories = 100;
+
+                    if (($decode_metadata['y_axis'] ?? null) === 'COUNT') {
+                        foreach (($json_version['features'] ?? []) as $feature) {
+                            $xv = $feature['properties'][$decode_metadata['x_axis']] ?? null;
+                            if ($xv === null) continue;
+                            $values_md[$xv] = ($values_md[$xv] ?? 0) + 1;
+                        }
+                    } else {
+                        foreach (($json_version['features'] ?? []) as $feature) {
+                            // make property names case-insensitive
+                            $props = array_change_key_case($feature['properties'], CASE_LOWER);
+                            $xv = $props[strtolower($decode_metadata['x_axis'])] ?? null;
+                            $yv = $props[strtolower($decode_metadata['y_axis'])] ?? null;
+
+                            if ($xv === null || !is_numeric($yv)) continue;
+                            $values_md[$xv] = ($values_md[$xv] ?? 0) + (float)$yv;
                         }
                     }
                     $labels = array_keys($values_md);
@@ -73,7 +136,16 @@ class DashboardController extends Controller
                     }
                     $values = array_values($values_md);
 
-                } else { # Handle Sum
+                    //populate colorMap with colors from metadata if they exist
+                    if (is_array($properties_metadata) && !empty($properties_metadata['colors'])) {
+                        $colorMap = $properties_metadata['colors'];
+                    }
+                    else {
+                        $colorMap = $this->getColorArray($get_widget, $labels);
+                    }
+
+                    $chart_types    = [2 => 'line', 3 => 'bar', 4 => 'pie', 5 => 'table'];
+                    $label_location = ($get_widget['widget_type_id'] == 4) ? 'right' : 'top';
 
                     foreach ($json_version['features'] as $feature) {
                         if (!isset($values_md[$feature['properties'][$decode_metadata['x_axis']]])) {
@@ -85,6 +157,11 @@ class DashboardController extends Controller
                     $labels = array_keys($values_md);
                     $values = array_values($values_md);
 
+                    $get_widget['chart']        = $chart;
+                    $get_widget['map_link_id']  = $decode_metadata['mapLinkID'] ?? 'noLink321π'; // <-- expose to Blade
+                    $get_widget['category_warning'] = $categoryWarning; // optional: attach flag if you ever want to expose it in Blade
+                    $get_widget['geometry_metadata']  = $geometry_metadata;
+                    $get_widget['properties_metadata'] = $properties_metadata;
                 }
 
                 $chart_types = [2 => 'line', 3 => 'bar', 4 => 'pie', 5 => 'table']; # TODO: Add the chart value name to the database as a column instead of this
@@ -151,10 +228,35 @@ class DashboardController extends Controller
         $dashboard_info = Dashboard::where('user_id', '=', Auth::id())
             ->where('id', '=', $id)
             ->get();
-        $my_files = FileUpload::select('filename', 'title')->where('user_id', '=', Auth::id())->get(); # Limit to filename only because it will be sloooooow with json in the db
-        $get_widget_types = DashboardWidgetType::get(); // Get all widget types
-        $array = ['dashboard_info' => $dashboard_info[0], 'widget_types' => $get_widget_types, 'files' => $my_files];
-        return view('profile.add-widgets', $array);
+        $my_files = FileUpload::select('filename', 'title')->where('user_id', Auth::id())->get();
+
+        // Include properties & geometry metadata for each file
+        $my_files = FileUpload::select('filename', 'title', 'properties_metadata', 'geometry_metadata')
+            ->where('user_id', Auth::id())
+            ->get()
+            ->map(function ($f) {
+                return [
+                    'filename' => $f->filename,
+                    'title' => $f->title,
+                    'properties_metadata' => json_decode($f->properties_metadata, true),
+                    'geometry_metadata' => json_decode($f->geometry_metadata, true),
+                ];
+            });
+
+        $get_widget_types = DashboardWidgetType::get();
+
+        $widgets = DashboardWidget::where('dashboard_id', $id)->get();
+        $mapWidgetList = [];
+        foreach ($widgets as $widget) {
+            if ($widget->widget_type_id == 1) $mapWidgetList[$widget->id] = $widget->name;
+        }
+
+        return view('profile.add-widgets', [
+            'dashboard_info' => $dashboard_info[0],
+            'widget_types'   => $get_widget_types,
+            'files'          => $my_files,
+            'mapWidgets'     => $mapWidgetList,
+        ]);
     }
 
     public function add_widget($id, Request $request) { // Add the widget to the database
@@ -169,32 +271,54 @@ class DashboardController extends Controller
                 'y_axis' => ['required']
             ]);
         }
-        if (!$request->widget_name) { # Did we not get a name? We should use the file Title
-            $get_filename_title = FileUpload::select('title')
-                ->where('user_id', '=', Auth::id())
-                ->where('filename', '=', $request->map_filename)
-                ->get();
-            if ($request->widget_type > 1) { # Give our own name for the widget if they leave it blank
-                if ($request->y_axis == 'COUNT') { # If it's count, don't include SUM 
-                    $widget_name = "$request->y_axis BY $request->x_axis ";
-                } else { 
-                    $widget_name = "SUM OF $request->y_axis BY $request->x_axis";
-                }
-            } else { # Use the maps uploaded name
-                $widget_name = $get_filename_title->value('title');
+
+        //Decode metadata
+        $properties_metadata = json_decode($file->properties_metadata, true);
+        $geometry_metadata   = json_decode($file->geometry_metadata, true);
+
+        //Determine if widget name was provided
+        if (!$request->widget_name) {
+            $title = FileUpload::where('user_id', Auth::id())
+                ->where('filename', $request->map_filename)
+                ->value('title');
+
+            if ((int)$request->widget_type > 1 && (int)$request->widget_type < 5) {
+                $widget_name = ($request->y_axis === 'COUNT')
+                    ? "{$request->y_axis} BY {$request->x_axis}"
+                    : "SUM OF {$request->y_axis} BY {$request->x_axis}";
+            } else {
+                $widget_name = $title ?? 'Widget';
             }
         } else { # Else use what the user set the title to
             $widget_name = $request->widget_name;
         }
         $widget = new DashboardWidget;
-        $widget->user_id = auth()->id();
-        $widget->dashboard_id = $id;
-        $widget->name = $widget_name;
-        $widget->widget_type_id = $request->widget_type;
-        if ($request->widget_type == 1) { #  Maps
-            $metadata = json_encode(['map_filename' => $request->map_filename]);
-        } elseif ($request->widget_type > 1){ # handle all charts
-            $metadata = json_encode(['x_axis' => $request->x_axis, 'y_axis' => $request->y_axis, 'map_filename' => $request->map_filename]);
+        $widget->user_id        = auth()->id();
+        $widget->dashboard_id   = $id;
+        $widget->name           = $widget_name;
+        $widget->widget_type_id = (int)$request->widget_type;
+
+        if ((int)$request->widget_type === 1) {
+            $metadata = [
+                'map_filename' => $request->map_filename,
+                'geometry_metadata' => $geometry_metadata,
+                'properties_metadata' => $properties_metadata,
+            ];
+        } elseif ((int)$request->widget_type === 5) {
+            $metadata = [
+                'map_filename'  => $request->map_filename,
+                'table_columns' => $request->input('table_columns', []),
+                'properties_metadata' => $properties_metadata,
+            ];
+        } else {
+            $metadata = [
+                'x_axis'       => $request->x_axis,
+                'y_axis'       => $request->y_axis,
+                'map_filename' => $request->map_filename,
+                'mapLinkID'    => $request->mapLinkID ?: 'noLink321π',
+                'geometry_metadata' => $geometry_metadata,
+                'properties_metadata' => $properties_metadata,
+            ];
         }
         $widget->metadata = $metadata;
         $widget->save();
@@ -333,15 +457,26 @@ class DashboardController extends Controller
         ]);
     }
 
-    // given a widget file and the nodes we want then we get the colors we want
-    public function getColorArray($widgetFile, $labels){
-        $defaultColors = ['#FF692A', '#05DF72', '#8E51FF', '#E12AFB', '#FFD230'];
-        $metadata = json_decode($widgetFile['metadata'], true);
-        if(!array_key_exists('colorMap', $metadata))
-            $metadata['colorMap'] = array();
-        foreach($labels as $key){
-            if(!array_key_exists($key, $metadata['colorMap'])){//if we don't have a color
-                $metadata['colorMap'][$key] = $defaultColors[sizeof($metadata['colorMap']) % sizeof($defaultColors)];//set it to a default for now...
+    private function getColorArray($widgetFile, $labels){
+        //decode metadata
+        $metadata = json_decode($widgetFile->metadata, true);
+        $geoMeta = $metadata['geometry_metadata'] ?? [];
+
+        // initialize color map if there isn't one
+        if(!array_key_exists('colorMap', $metadata)){
+            $metadata['colorMap'] = [];
+            $defaultColors = ['#FF692A', '#05DF72', '#8E51FF', '#E12AFB', '#FFD230'];
+
+            if(is_array($labels)){
+                
+                foreach($labels as $key) {
+                    //search through geometry_metadata to try and find colors for each label
+                    $metaColor = collect($geoMeta['features'] ?? [])
+                        ->firstWhere('properties.name', $key)['properties']['color'] ?? null;
+                    //Assign found color or give labels a 'default' color
+                    $metadata['colorMap'][$key] = $metaColor ?? $defaultColors[count($metadata['colorMap']) % count($defaultColors)];
+                }
+            
             }
         }
         $widgetFile['metadata'] = json_encode($metadata);
