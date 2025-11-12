@@ -161,7 +161,7 @@ public function upload(Request $request)
                     $file_upload->title              = $title;
                     $file_upload->save();
 
-                    //Insert features into geo_features table
+                    /* //Insert features into geo_features table
                     if (!empty($json['features']) && is_array($json['features'])) {
                         foreach ($json['features'] as $feature) {
                             // Skip if not 'geometry' feature
@@ -173,7 +173,7 @@ public function upload(Request $request)
                                 'properties' => $feature['properties'] ?? [],
                             ]);
                         }
-                    }
+                    } */
 
                 } elseif ($file_extension === 'gpkg' || $file_extension === 'geopkg') {
                     // List layers
@@ -212,7 +212,7 @@ public function upload(Request $request)
                             $file_upload->save();
 
                             //Insert features into geo_features table
-                            if (!empty($json['features']) && is_array($json['features'])) {
+                            /* if (!empty($json['features']) && is_array($json['features'])) {
                                 foreach ($json['features'] as $feature) {
                                     // Skip if not 'geometry' feature
                                     if (!isset($feature['geometry'])) continue;
@@ -223,7 +223,7 @@ public function upload(Request $request)
                                         'properties' => $feature['properties'] ?? [],
                                     ]);
                                 }
-                            }
+                            } */
 
                             $layer++;
                         }
@@ -272,7 +272,7 @@ public function upload(Request $request)
                             $file_upload->title               = "$final_output (L$layer)";
                             $file_upload->save();
                             
-                            //Insert features into geo_features table
+                            /* //Insert features into geo_features table
                             if (!empty($json['features']) && is_array($json['features'])) {
                                 foreach ($json['features'] as $feature) {
                                     // Skip if not 'geometry' feature
@@ -284,7 +284,7 @@ public function upload(Request $request)
                                         'properties' => $feature['properties'] ?? [],
                                     ]);
                                 }
-                            }
+                            } */
 
                             $layer++;
                         }
@@ -303,8 +303,7 @@ public function upload(Request $request)
         }
     }
 
-<<<<<<< Updated upstream
-    //Function to get GeoJSON Feature Collection by FileUpload ID
+    /* //Function to get GeoJSON Feature Collection by FileUpload ID
     public function toFeatureCollection($id)
     {
         //Try to find file and abort if not found
@@ -327,9 +326,8 @@ public function upload(Request $request)
 
         //Return as JSON
         return response()->json($geojson);
-    }
+    } */
 
-=======
     //Function to get GeoJSON data/metadata
     public function getGeojsonMetadata($fileUploadId)
     {
@@ -341,5 +339,4 @@ public function upload(Request $request)
             'geometry_metadata' => $fileUpload->geometry_metadata,
         ]);
     }
->>>>>>> Stashed changes
 }

@@ -233,15 +233,7 @@ class DashboardController extends Controller
         // Include properties & geometry metadata for each file
         $my_files = FileUpload::select('filename', 'title', 'properties_metadata', 'geometry_metadata')
             ->where('user_id', Auth::id())
-            ->get()
-            ->map(function ($f) {
-                return [
-                    'filename' => $f->filename,
-                    'title' => $f->title,
-                    'properties_metadata' => json_decode($f->properties_metadata, true),
-                    'geometry_metadata' => json_decode($f->geometry_metadata, true),
-                ];
-            });
+            ->get();
 
         $get_widget_types = DashboardWidgetType::get();
 
