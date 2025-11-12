@@ -118,16 +118,35 @@
         								fillOpacity: 0.8
     								});
 								}
+
 								// Lazy load the geojson assigned to this widget
 								var {{ pathinfo($widget['filename'], PATHINFO_FILENAME); }}{{ $widget['random_id'] }} =
   									new L.GeoJSON.AJAX("{{ route('profile.get-geojson', ['filename' => pathinfo($widget['filename'], PATHINFO_FILENAME)]) }}", {
-    									pointToLayer: createCircleMarker,
+    									style: styleFeature,
+										pointToLayer: createCircleMarker,
 										onEachFeature: function (feature, layer) {
       										layer.bindPopup(
         										'<pre>' + JSON.stringify(feature.properties, null, ' ').replace(/[\{\}"]/g, '') + '</pre>'
       										);
     									}
   									});
+
+									//Use stored geometry and propertries metadata for styling
+										const geoMeta = @json($widget['geometry_metadata'] ?? []);
+										const propertyMeta = @json($widget['geometry_metadata'] ?? []);
+
+									//Style features on map based on geometry and/or properties
+										function styleFeature(feature) {
+											const geoType = feature.geometry?.type;
+											const props = feature.properties || {};
+											const color = props.color || propMeta?.default_color || '#3388ff';
+											return {
+												color: color,
+												fillColor: color,
+												weight: geoType === 'Polygon' ? 2 : 1,
+												fillOpacity: geoType == 'Polygon' ? 0.5 : 0.8
+											};
+										}
 
 								// Update the object we created earlier with an empty geojson, with the newly loaded ajax driven pull above
 								overlayMaps{{ $widget['random_id'] }}.{{ pathinfo($widget['filename'], PATHINFO_FILENAME); }} = {{ pathinfo($widget['filename'], PATHINFO_FILENAME); }}{{ $widget['random_id'] }};
