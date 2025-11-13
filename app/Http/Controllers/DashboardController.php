@@ -214,6 +214,10 @@ class DashboardController extends Controller
             // kinda just felt like putting presence in there tbh, might be useful or something
 
             mildly sorry for the text dump besties <3
+
+
+
+            // max & min needs to be tested and fixed properly
         */
         $newDataset = array();
 
@@ -262,7 +266,7 @@ class DashboardController extends Controller
                 }
                 $newDataset[$key] = $min;
             }
-        else if ($calculation == "min")
+        else if ($calculation == "max")
             foreach($inputs as $key){
                 $max = -99999999; // f it, just as long as something is larger...
                 foreach($dataset as $tuple){
@@ -312,6 +316,9 @@ class DashboardController extends Controller
                 $newDataset[$key] = $count / $truecount;
             }
         }
+        else
+            $newDataset[$key] = 17776;
+        
         if($toJSON != 0) {
             $tempSet = array();
             foreach ($newDataset as $key => $value)
