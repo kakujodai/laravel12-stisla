@@ -109,42 +109,6 @@ class DashboardController extends Controller
                     $categoryWarning = $results['catWarning'];
                     unset($results);// I dunno, feels nice
 
-                    /*
-                    $values_md = [];
-                    $categoryWarning = false;
-                    $maxCategories = 100;
-
-                    if (($decode_metadata['y_axis'] ?? null) === 'COUNT') {
-                        foreach (($json_version['features'] ?? []) as $feature) {
-                            $xv = $feature['properties'][$decode_metadata['x_axis']] ?? null;
-                            if ($xv === null) continue;
-                            $values_md[$xv] = ($values_md[$xv] ?? 0) + 1;
-                        }
-                    } else {
-                        foreach (($json_version['features'] ?? []) as $feature) {
-                            // make property names case-insensitive
-                            $props = array_change_key_case($feature['properties'], CASE_LOWER);
-                            $xv = $props[strtolower($decode_metadata['x_axis'])] ?? null;
-                            $yv = $props[strtolower($decode_metadata['y_axis'])] ?? null;
-
-                            if ($xv === null || !is_numeric($yv)) continue;
-                            $values_md[$xv] = ($values_md[$xv] ?? 0) + (float)$yv;
-                        }
-                    }
-
-                    // Cap category count and mark warning only for pie charts
-                    if ($get_widget['widget_type_id'] == 4 && count($values_md) > $maxCategories) {
-                        $values_md = array_slice($values_md, 0, $maxCategories, true);
-                        $categoryWarning = true;
-                    }
-
-                    $labels = array_keys($values_md);
-                    if ($get_widget['widget_type_id'] == 4) {
-                        $labels = array_map(static fn($v) => (string)$v, $labels);
-                    }
-                    $values = array_values($values_md);
-                    */
-
                     $chart_types    = [2 => 'line', 3 => 'bar', 4 => 'pie', 5 => 'table'];
                     $label_location = ($get_widget['widget_type_id'] == 4) ? 'right' : 'top';
                     $colorMap       = $this->getColorArray($get_widget, $labels);
@@ -583,35 +547,6 @@ class DashboardController extends Controller
         $values = $results['values'];
         $categoryWarning = $results['catWarning'];
         unset($results);// I dunno, feels nice
-        /*
-        $values_md = [];
-        $categoryWarning = false;
-        $maxCategories = 100;
-
-        if (strtoupper($yAxis) === 'COUNT') {
-            foreach ($filtered as $f) {
-                $key = $f['properties'][$xAxis] ?? null;
-                if ($key === null) continue;
-                $values_md[$key] = ($values_md[$key] ?? 0) + 1;
-            }
-        } else {
-            foreach ($filtered as $f) {
-                $key = $f['properties'][$xAxis] ?? null;
-                $val = $f['properties'][$yAxis] ?? null;
-                if ($key === null || !is_numeric($val)) continue;
-                $values_md[$key] = ($values_md[$key] ?? 0) + (float)$val;
-            }
-        }
-
-        // Cap category count
-        if (count($values_md) > $maxCategories) {
-            $values_md = array_slice($values_md, 0, $maxCategories, true);
-            $categoryWarning = true;
-        }
-
-        $labels = array_keys($values_md);
-        $values = array_values($values_md);
-        */
 
         return response()->json([
             'labels' => $labels,
