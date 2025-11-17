@@ -436,6 +436,7 @@ class DashboardController extends Controller
                 'norm'          => $request->norm_control,
                 'norm_axis'     => $norm_axis,
                 'norm_calc'     => $request->norm_calc,
+                'x_axis'       => $request->norm_calc,// makes the map look better, trust
             ];
         } else{
             $metadata = [
