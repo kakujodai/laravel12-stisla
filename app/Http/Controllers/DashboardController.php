@@ -571,7 +571,16 @@ class DashboardController extends Controller
         if(!array_key_exists('colorMap', $metadata)){
             $metadata['colorMap'] = array();
             if(is_array($labels)){
-                $defaultColors = ['#FF692A', '#05DF72', '#8E51FF', '#E12AFB', '#FFD230'];// default colors
+                // default colors from chartjs
+                $defaultColors = [
+                    'rgb(54, 162, 235)', // blue
+                    'rgb(255, 99, 132)', // red
+                    'rgb(255, 159, 64)', // orange
+                    'rgb(255, 205, 86)', // yellow
+                    'rgb(75, 192, 192)', // green
+                    'rgb(153, 102, 255)', // purple
+                    'rgb(201, 203, 207)' // grey
+                ];
                 foreach($labels as $key)//give all the labels a 'default' color
                     $metadata['colorMap'][$key] = $defaultColors[sizeof($metadata['colorMap']) % sizeof($defaultColors)];
             
