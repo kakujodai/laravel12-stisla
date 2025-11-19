@@ -303,31 +303,6 @@ public function upload(Request $request)
         }
     }
 
-    /* //Function to get GeoJSON Feature Collection by FileUpload ID
-    public function toFeatureCollection($id)
-    {
-        //Try to find file and abort if not found
-        $file = FileUpload::findOrFail($id);
-
-        //Get all features related to this file
-        $features = $file->features()->get()
-
-        //Map DB rows to GeoJson feature collection
-        $geojson = [
-            'type' => 'FeatureCollection',
-            'features' => $features->map(function ($f) {
-                return [
-                    'type' => 'Feature',
-                    'geometry' => $f->geometry,
-                    'properties' => $f->properties,
-                ];
-            }),
-        ];
-
-        //Return as JSON
-        return response()->json($geojson);
-    } */
-
     //Function to get GeoJSON data/metadata
     public function getGeojsonMetadata($fileUploadId)
     {
