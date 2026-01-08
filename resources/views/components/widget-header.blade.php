@@ -5,17 +5,10 @@
     <!-- Center: Settings Button -->
     @if ($hasSettings)
         <div class="mx-auto position-relative">
-            <button id="settingsBtn{{ $randomId }}" class="btn btn-primary btn-sm">
-                <i class="fa fa-bars"></i>
-            </button>
-
             <!-- Popup menu Depends on widget type -->
-            <div id="settingsMenu{{ $randomId }}" 
-                class="card shadow-sm"
-                style="display:none; position:absolute; top:100%; left:50%; transform:translateX(-50%); z-index:3000; min-width:180px; max-width:300px;">
-                <div class="card-body p-2">
-                </div>
-            </div>
+            <a href="{{ route('profile.edit-widgets', ['id' => $widgetId, 'dash_id' => $dashboardId]) }}" method="HEAD" style="display:inline-block;"class="btn btn-primary btn-sm">
+                <i class="fa fa-bars"></i>
+            </a>
         </div>
     @endif
 
