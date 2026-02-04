@@ -29,11 +29,15 @@
 @endpush
 
 @section('content')
-<div class="content">
-    <input type="checkbox" id="importColors" name="importColors" value="importColors">
-    <label for="importColors"> Import geojson colors</label><br>
-    <button class="btn btn-warning" type="submit">Save and Exit</button>
-</div>
+<form action="{{ route('profile.edit-widgets', ['dash_id' => $dashboard_info['id'], 'id' => $widget['id']]) }}" method="POST" enctype="multipart/form-data">
+    @csrf
+    <div class="form-group">
+        <input type="checkbox" id="importColors" name="importColors" value="importColors">
+        <label for="importColors"> Import geojson colors</label><br>
+        <button class="btn btn-warning" type="submit">Save and Exit</button>
+    </div>
+</form>
+
 @endsection
 
 @push('scripts')
