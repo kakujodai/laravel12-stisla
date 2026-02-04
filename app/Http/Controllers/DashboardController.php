@@ -479,22 +479,20 @@ class DashboardController extends Controller
     }
 
     // processes the edit widget 
-    public function edit_widget($id, Request $request){
-        $request->validate([
-            'widget_type'  => ['required'],
-            'map_filename' => ['required'],
-            'widget'       => ['required'],
-        ]);
+    public function edit_widget($dash_id, $widget_id, Request $request){
+        $widget = DashboardWidget::where('user_id', Auth::id())
+            ->where('id', $widget_id)
+            ->firstOrFail();
+
         $metadata = json_decode($widget->metadata);
         // hexcode in field called 'Color'
         if($request->importColors)
             $metadata->importColors = true;
 
         $widget->metadata = json_encode($metadata);
-        $widget = $request->widget;
         $widget->save(); // should be all I need to save the contents of the widget, right?
-
-        return redirect()->route('profile.dashboard', ['id' => $id]);
+        
+        return redirect()->route('profile.dashboard', ['id' => $dash_id]);
     }
 
     public function delete_widget(Request $request) {
