@@ -156,7 +156,7 @@
 
 								// Create circleMarkers
 								function createCircleMarker (feature, latlng) {
-    								const color = feature.properties.color || '#3388ff';
+    								var color = feature.properties.color || '#3388ff';
     								return L.circleMarker(latlng, {
         								radius: 3,
         								color: color,
