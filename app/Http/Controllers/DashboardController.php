@@ -47,6 +47,10 @@ class DashboardController extends Controller
                     $get_widget['random_id'] = $get_widget['id'];
                     $get_widget['filename']  = preg_replace('/[^A-Za-z0-9\_\.]/', '', basename($get_map_filename));
                 }
+                if(array_key_exists('importColors',$decode_metadata) && $decode_metadata['importColors'])
+                    $get_widget['importColor'] = true;
+                else
+                    $get_widget['importColor'] = false;
             }
             elseif ($get_widget['widget_type_id'] == 5) { # TABLE!
                 $geojson = FileUpload::select('geojson')

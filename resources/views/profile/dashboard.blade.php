@@ -156,8 +156,11 @@
 
 								// Create circleMarkers
 								function createCircleMarker (feature, latlng) {
-    								var color = feature.properties.color || '#3388ff';
-    								return L.circleMarker(latlng, {
+    								if("{{ $widget['importColor'] }}")
+										var color = feature.properties.color || '#AAAAAA';
+									else
+    									var color = '#3388ff';
+									return L.circleMarker(latlng, {
         								radius: 3,
         								color: color,
         								fillColor: color,
