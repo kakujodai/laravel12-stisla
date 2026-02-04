@@ -481,6 +481,12 @@ class DashboardController extends Controller
             'map_filename' => ['required'],
             'widget'       => ['required'],
         ]);
+        $metadata = json_decode($widget->metadata);
+        // hexcode in field called 'Color'
+        if($request->importColors)
+            $metadata->importColors = true;
+
+        $widget->metadata = json_encode($metadata);
         $widget = $request->widget;
         $widget->save(); // should be all I need to save the contents of the widget, right?
 

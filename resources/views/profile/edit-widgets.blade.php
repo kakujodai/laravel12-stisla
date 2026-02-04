@@ -30,6 +30,8 @@
 
 @section('content')
 <div class="content">
+    <input type="checkbox" id="importColors" name="importColors" value="importColors">
+    <label for="importColors"> Import geojson colors</label><br>
     <button class="btn btn-warning" type="submit">Save and Exit</button>
 </div>
 @endsection
