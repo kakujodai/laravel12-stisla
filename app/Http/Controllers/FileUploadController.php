@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rules\File;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Process;
 use App\Models\FileUpload;
 
@@ -209,5 +210,25 @@ private function safeDecodeJson(string $raw): array
         } else {
             return back()->with('error', 'This file already exists within the system');
         }
+    }
+
+    public function delete_file(Request $request)
+    {
+        $request->validate([
+            'filename' => ['required', 'string'],
+        ]);
+
+        $deleted = FileUpload::where('user_id', Auth::id())
+        ->where('filename', $request->filename)
+        ->delete();
+
+        if (!$deleted) {
+            return back()->with('error', 'File not found.');
+        }
+
+        // Delete the stored file
+        Storage::delete('users/' . Auth::id() . '/' . $request->filename);
+
+        return redirect()->route('profile.upload')->with('success', 'File deleted successfully.');
     }
 }

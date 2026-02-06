@@ -16,6 +16,7 @@ Route::middleware(['auth'])->group(function () {
     Route::put('/profile/update', [ProfileController::class, 'update'])->name('profile.update');
     Route::get('/profile/upload', [ProfileController::class, 'show_files'])->name('profile.upload');
     Route::post('/profile/upload', [FileUploadController::class, 'upload']);
+    Route::post('/profile/delete-upload', [FileUploadController::class, 'delete_file'])->name('profile.delete-upload');
     Route::get('/profile/change-password', [ProfileController::class, 'changepassword'])->name('profile.change-password');
     Route::put('/profile/password', [ProfileController::class, 'password'])->name('profile.password');
     Route::get('/blank-page', [App\Http\Controllers\ProfileController::class, 'blank'])->name('blank');

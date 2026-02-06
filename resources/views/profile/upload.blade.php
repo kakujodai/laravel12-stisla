@@ -13,6 +13,7 @@
                                 <tr>
                                     <th>Title</th>
                                     <th>Filename</th>
+                                    <th>Actions</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -20,6 +21,13 @@
                                 <tr>
                                     <td>{{$file['title']}}</td>
                                     <td>{{$file['filename']}}</td>
+                                    <td>
+                                        <form action="{{ route('profile.delete-upload') }}" method="POST" onsubmit="return confirm('Delete this file?');">
+                                            @csrf
+                                            <input type="hidden" name="filename" value="{{$file['filename']}}">
+                                            <button type="submit" class="btn btn-sm btn-danger">Delete</button>
+                                        </form>
+                                    </td>
                                 </tr>
                                 @endforeach
                             </tbody>
