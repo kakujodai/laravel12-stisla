@@ -6,6 +6,7 @@
 
 @push('css')
     <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+    <style> html { outline: 6px solid red !important; } </style>
     <style>
         /* pill chips + bordered wrapper look */
         .col-selector-wrap .select2-container--default .select2-selection--multiple {
@@ -25,6 +26,50 @@
         .col-selector-wrap .select2-dropdown {
             border-top:1px solid #e2e2e2; box-shadow:none; border-radius:0 0 6px 6px;
         }
+        
+        /* the chip */
+        .col-selector-wrap .select2-container--default .select2-selection--multiple .select2-selection__choice {
+            position: relative;
+            padding-left: 26px;
+        }
+
+        /* the X */
+        .col-selector-wrap .select2-container--default .select2-selection--multiple .select2-selection__choice__remove {
+            border: 0;
+            border-right: 0;
+            background: transparent;
+            position: absolute;
+            left: 6px;
+            top: 50%;
+            transform: translateY(-50%);
+            line-height: 1;
+        }
+
+        /* the text */
+        .col-selector-wrap .select2-container--default .select2-selection--multiple .select2-selection__choice__display {
+            padding-left: 0;
+        }
+
+        /* TESTING:
+
+        .col-selector-wrap .select2-container--default .select2-selection__choice { /*parent to whats below, relative
+            position: relative;
+            padding-left: 22px; 
+        }
+
+        .select2-container--default .select2-selection--multiple .select2-selection__choice__display {
+            cursor: default;
+            padding-left: 10px;
+            padding-right: 5px;
+        }
+
+        .col-selector-wrap .select2-container--default .select2-selection--multiple .select2-selection__choice__remove {
+            border-right: 0;
+            border: 0;
+            background: transparent;
+        }
+        */
+
     </style>
 @endpush
 
@@ -122,6 +167,7 @@
 @push('scripts')
     {{--Select2 JS--}}
     <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+
 
     <script>
     $(function () {
