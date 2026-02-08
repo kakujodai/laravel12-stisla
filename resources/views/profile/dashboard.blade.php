@@ -108,7 +108,7 @@
 
             @foreach ($widgets as $widget)
                 @if ($widget['widget_type_id'] == 1) <!-- I'm the map, i'm the map (he's the map, he's the map) I'M THE MAP!-->
-                <div class="col-md-4">
+				<div class="col-md-4">
                     <div id="sortable-cards{{ $widget['id'] }}" class="card">
                         <x-widget-header 
    							:name="$widget['name']" 
@@ -302,6 +302,15 @@
 							</div>
 						</div>
 
+						<!-- 
+					here there be drawing
+					-->
+					@elseif ($widget['widget_type_id']  == 6)
+						<div>
+						hiiiiiiiiiiiiiiiiiiiiiii
+
+						</div>
+
 					@else <!-- Table -->
 						<div  class="col-md-12">
 							<div id="no-resize" class="card">
@@ -418,7 +427,9 @@
 								</div>
 							</div>
 						</div>	
-            	@endif
+            	
+
+				@endif
             @endforeach
 		</div>
 	</div>

@@ -139,6 +139,10 @@ class DashboardController extends Controller
                     $get_widget['category_warning'] = $categoryWarning; // optional: attach flag if you ever want to expose it in Blade
                 }
             }
+            elseif ($get_widget['widget_type_id'] == 6) {
+                $get_widget['table_headings'] = [];
+                $get_widget['table'] = [];
+            }
 
         }
 
