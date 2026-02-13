@@ -453,12 +453,16 @@
 				containment: "#none_shall_pass", // Make sure you can't put the card outside of this div
 				cancel: ".no-sort", // Make sure we don't attempt to move the card when we're actually in the map panning
 				stop: function(event, ui) {
+					if (isLocked())
+						return;
 					var positions = JSON.parse(localStorage.positions || "{}");
 					positions[this.id] = ui.position; // Store by element ID
 					localStorage.positions = JSON.stringify(positions);
 				}
 				}).resizable({
 					stop: function(event, ui) {
+						if (isLocked())
+							return;
 						var positions = JSON.parse(localStorage.positions || "{}");
 						positions[this.id] = ui.position; // Store by element ID
 						positions[this.id].width = ui.size.width;
