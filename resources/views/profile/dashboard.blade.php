@@ -62,6 +62,9 @@
 			<h3>{{ $dashboard_info['name'] }}</h3>
 			<a href="{{ route('profile.add-widgets', ['id' => $dashboard_info['id']]) }}" class="btn btn-primary float-right">Add Widget</a>
 		</div>
+		<div class="col-md-12 flex-header">
+			<button type="button" class="btn btn-secondary float-right" id="dashboardLockBtn"> <i class="fas fa-lock"></i> Lock Dashboard</button>
+		</div>
 	</div>
     <div id="none_shall_pass" class="">
         <div class="row">
@@ -426,7 +429,24 @@
 	<script>
 		// That sweet sweet moving cards trick
 		document.addEventListener("DOMContentLoaded", function() {
-			$(".card").draggable({
+
+			const lockBtn = document.getElementById("dashboardLockBtn");
+    		const storageKey = "dashboardLock:{{ $dashboard_info['id'] }}";
+
+			// Functions to enable/disable dragging and update button state
+			function enableDragging() {
+				$(".card").draggable("enable");
+        		$(".card").resizable("enable");
+        		$("#none_shall_pass").removeClass("dashboard-locked");
+			}
+			function disableDragging() {
+				$(".card").draggable("disable");
+				$(".card").resizable("disable");
+				$("#none_shall_pass").addClass("dashboard-locked");
+			}
+			
+			function initDragResize() {
+				$(".card").draggable({
 				addClasses: false,
 				cursor: "grabbing", // Change the cursor to the move symbol
 				stack: ".card", // What items to change z-index on so they don't interact
@@ -437,20 +457,52 @@
 					positions[this.id] = ui.position; // Store by element ID
 					localStorage.positions = JSON.stringify(positions);
 				}
-			}).resizable({
-				stop: function(event, ui) {
-					var positions = JSON.parse(localStorage.positions || "{}");
-					positions[this.id] = ui.position; // Store by element ID
-					positions[this.id].width = ui.size.width;
-					positions[this.id].height = ui.size.height;
-					localStorage.positions = JSON.stringify(positions);
-				}
-			});
+				}).resizable({
+					stop: function(event, ui) {
+						var positions = JSON.parse(localStorage.positions || "{}");
+						positions[this.id] = ui.position; // Store by element ID
+						positions[this.id].width = ui.size.width;
+						positions[this.id].height = ui.size.height;
+						localStorage.positions = JSON.stringify(positions);
+					}
+				});
+			}
+
+			function isLocked() {
+				return localStorage.getItem(storageKey) === "true";
+			}
+
+			function updateButtonUI() {
+        		if (isLocked()) {
+            		lockBtn.innerHTML = '<i class="fas fa-unlock"></i> Unlock Dashboard';
+            		disableDragging();
+        		}
+				else {
+            		lockBtn.innerHTML = '<i class="fas fa-lock"></i> Lock Dashboard';
+            		enableDragging();
+        		}
+    		}
+			
+			// initialize drag/resize on page load
+    			initDragResize();
+
+			//Restore saved positions
+
 			var sPositions = localStorage.positions || "{}";
 			var positions = JSON.parse(sPositions);
 			// If using localStorage
 			$.each(positions, function(id, pos) {
 				$("#" + id).css(pos);
+			});
+
+			// set intial lock state
+			updateButtonUI();
+
+			//	button click toggle handler
+			lockBtn.addEventListener("click", function() {
+				const newState = !isLocked();
+				localStorage.setItem(storageKey, newState);
+				updateButtonUI();
 			});
 		});
 	</script>
