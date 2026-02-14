@@ -156,14 +156,10 @@
 
 								// Create circleMarkers
 								function createCircleMarker (feature, latlng) {
-    								if("{{ $widget['importColor'] }}")
-										var color = feature.properties.color || '#AAAAAA';
-									else
-    									var color = '#3388ff';
+									var thecolor = "{{$widget['importColor']}}" ? (feature.properties.color || '#00AA00') : '#3388ff';
 									return L.circleMarker(latlng, {
         								radius: 3,
-        								color: color,
-        								fillColor: color,
+        								color: thecolor,
         								weight: 1,
         								fillOpacity: 0.8
     								});
@@ -172,10 +168,20 @@
 								// Lazy load the geojson assigned to this widget
 								var {{ pathinfo($widget['filename'], PATHINFO_FILENAME); }}{{ $widget['random_id'] }} =
   									new L.GeoJSON.AJAX("{{ route('profile.get-geojson', ['filename' => pathinfo($widget['filename'], PATHINFO_FILENAME)]) }}", {
-    									pointToLayer: createCircleMarker,
+										pointToLayer: createCircleMarker,
+										style: function (feature){
+											var theColor = "{{$widget['importColor']}}" ? (feature.properties.color || '#663399') : '#3388ff'
+											return {
+												color: theColor,
+												fillColor: theColor,
+												weight: 1,
+												fillOpacity: 0.8,
+												opacity: 1,
+											};
+										},
 										onEachFeature: function (feature, layer) {
-      										layer.bindPopup('<pre>' + JSON.stringify(feature.properties, null, ' ').replace(/[\{\}"]/g, '') + '</pre>');
-    									}
+      										layer.bindPopup('<pre>' + JSON.stringify(feature.properties, null, ' ').replace(/[\{\}"]/g, '') + '</pre>');	
+										},
   									});
 
 								overlayMaps{{ $widget['random_id'] }}.{{ pathinfo($widget['filename'], PATHINFO_FILENAME); }} = {{ pathinfo($widget['filename'], PATHINFO_FILENAME); }}{{ $widget['random_id'] }};
