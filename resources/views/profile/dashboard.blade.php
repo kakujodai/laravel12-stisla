@@ -62,6 +62,9 @@
 			<h3>{{ $dashboard_info['name'] }}</h3>
 			<a href="{{ route('profile.add-widgets', ['id' => $dashboard_info['id']]) }}" class="btn btn-primary float-right">Add Widget</a>
 		</div>
+		<div class="col-md-12 flex-header">
+			<button type="button" class="btn btn-secondary float-right" id="dashboardLockBtn"> <i class="fas fa-lock"></i> Lock Dashboard</button>
+		</div>
 	</div>
     <div id="none_shall_pass" class="">
         <div class="row">
@@ -153,11 +156,10 @@
 
 								// Create circleMarkers
 								function createCircleMarker (feature, latlng) {
-    								const color = feature.properties.color || '#3388ff';
-    								return L.circleMarker(latlng, {
+									var thecolor = "{{$widget['importColor']}}" ? (feature.properties.color || '#00AA00') : '#3388ff';
+									return L.circleMarker(latlng, {
         								radius: 3,
-        								color: color,
-        								fillColor: color,
+        								color: thecolor,
         								weight: 1,
         								fillOpacity: 0.8
     								});
@@ -166,10 +168,20 @@
 								// Lazy load the geojson assigned to this widget
 								var {{ pathinfo($widget['filename'], PATHINFO_FILENAME); }}{{ $widget['random_id'] }} =
   									new L.GeoJSON.AJAX("{{ route('profile.get-geojson', ['filename' => pathinfo($widget['filename'], PATHINFO_FILENAME)]) }}", {
-    									pointToLayer: createCircleMarker,
+										pointToLayer: createCircleMarker,
+										style: function (feature){
+											var theColor = "{{$widget['importColor']}}" ? (feature.properties.color || '#663399') : '#3388ff'
+											return {
+												color: theColor,
+												fillColor: theColor,
+												weight: 1,
+												fillOpacity: 0.8,
+												opacity: 1,
+											};
+										},
 										onEachFeature: function (feature, layer) {
-      										layer.bindPopup('<pre>' + JSON.stringify(feature.properties, null, ' ').replace(/[\{\}"]/g, '') + '</pre>');
-    									}
+      										layer.bindPopup('<pre>' + JSON.stringify(feature.properties, null, ' ').replace(/[\{\}"]/g, '') + '</pre>');	
+										},
   									});
 
 								overlayMaps{{ $widget['random_id'] }}.{{ pathinfo($widget['filename'], PATHINFO_FILENAME); }} = {{ pathinfo($widget['filename'], PATHINFO_FILENAME); }}{{ $widget['random_id'] }};
@@ -426,31 +438,84 @@
 	<script>
 		// That sweet sweet moving cards trick
 		document.addEventListener("DOMContentLoaded", function() {
-			$(".card").draggable({
+
+			const lockBtn = document.getElementById("dashboardLockBtn");
+    		const storageKey = "dashboardLock:{{ $dashboard_info['id'] }}";
+
+			// Functions to enable/disable dragging and update button state
+			function enableDragging() {
+				$(".card").draggable("enable");
+        		$(".card").resizable("enable");
+        		$("#none_shall_pass").removeClass("dashboard-locked");
+			}
+			function disableDragging() {
+				$(".card").draggable("disable");
+				$(".card").resizable("disable");
+				$("#none_shall_pass").addClass("dashboard-locked");
+			}
+			
+			function initDragResize() {
+				$(".card").draggable({
 				addClasses: false,
 				cursor: "grabbing", // Change the cursor to the move symbol
 				stack: ".card", // What items to change z-index on so they don't interact
 				containment: "#none_shall_pass", // Make sure you can't put the card outside of this div
 				cancel: ".no-sort", // Make sure we don't attempt to move the card when we're actually in the map panning
 				stop: function(event, ui) {
+					if (isLocked())
+						return;
 					var positions = JSON.parse(localStorage.positions || "{}");
 					positions[this.id] = ui.position; // Store by element ID
 					localStorage.positions = JSON.stringify(positions);
 				}
-			}).resizable({
-				stop: function(event, ui) {
-					var positions = JSON.parse(localStorage.positions || "{}");
-					positions[this.id] = ui.position; // Store by element ID
-					positions[this.id].width = ui.size.width;
-					positions[this.id].height = ui.size.height;
-					localStorage.positions = JSON.stringify(positions);
-				}
-			});
+				}).resizable({
+					stop: function(event, ui) {
+						if (isLocked())
+							return;
+						var positions = JSON.parse(localStorage.positions || "{}");
+						positions[this.id] = ui.position; // Store by element ID
+						positions[this.id].width = ui.size.width;
+						positions[this.id].height = ui.size.height;
+						localStorage.positions = JSON.stringify(positions);
+					}
+				});
+			}
+
+			function isLocked() {
+				return localStorage.getItem(storageKey) === "true";
+			}
+
+			function updateButtonUI() {
+        		if (isLocked()) {
+            		lockBtn.innerHTML = '<i class="fas fa-unlock"></i> Unlock Dashboard';
+            		disableDragging();
+        		}
+				else {
+            		lockBtn.innerHTML = '<i class="fas fa-lock"></i> Lock Dashboard';
+            		enableDragging();
+        		}
+    		}
+			
+			// initialize drag/resize on page load
+    			initDragResize();
+
+			//Restore saved positions
+
 			var sPositions = localStorage.positions || "{}";
 			var positions = JSON.parse(sPositions);
 			// If using localStorage
 			$.each(positions, function(id, pos) {
 				$("#" + id).css(pos);
+			});
+
+			// set intial lock state
+			updateButtonUI();
+
+			//	button click toggle handler
+			lockBtn.addEventListener("click", function() {
+				const newState = !isLocked();
+				localStorage.setItem(storageKey, newState);
+				updateButtonUI();
 			});
 		});
 	</script>

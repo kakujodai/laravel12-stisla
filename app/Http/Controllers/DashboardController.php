@@ -47,6 +47,10 @@ class DashboardController extends Controller
                     $get_widget['random_id'] = $get_widget['id'];
                     $get_widget['filename']  = preg_replace('/[^A-Za-z0-9\_\.]/', '', basename($get_map_filename));
                 }
+                if(array_key_exists('importColors',$decode_metadata) && $decode_metadata['importColors'])
+                    $get_widget['importColor'] = true;
+                else
+                    $get_widget['importColor'] = false;
             }
             elseif ($get_widget['widget_type_id'] == 5) { # TABLE!
                 $geojson = FileUpload::select('geojson')
@@ -178,8 +182,6 @@ class DashboardController extends Controller
             // kinda just felt like putting presence in there tbh, might be useful or something
 
             mildly sorry for the text dump besties <3
-
-
 
             // max & min needs to be tested and fixed properly
         */
@@ -454,6 +456,45 @@ class DashboardController extends Controller
         return redirect()->route('profile.dashboard', ['id' => $id]);
     }
 
+    // redirect to the edit widget page. needs the id and the widget id being edited
+    public function edit_widgets($dash_id, $id) {
+
+        $dashboard_info = Dashboard::where('user_id', Auth::id())->where('id', $dash_id)->get();
+        $widgets = DashboardWidget::where('dashboard_id', $dash_id)->get();
+        $my_files = FileUpload::select('filename', 'title')->where('user_id', Auth::id())->get();
+        $get_widget_types = DashboardWidgetType::get();
+        $mapWidgetList = [];
+        foreach ($widgets as $widget) {
+            if ($widget->widget_type_id == 1) $mapWidgetList[$widget->id] = $widget->name;
+            if ($widget->id == $id) $chosenOne = $widget;
+        }
+
+        return view('profile.edit-widgets', [
+            'dashboard_info' => $dashboard_info[0],
+            'widget_types'   => $get_widget_types,  // sets initial form of edit page
+            'mapWidgets'     => $mapWidgetList,     // for if editing a graph widget
+            'files'          => $my_files,
+            'widget'         => $chosenOne,         // chosen widget to edit
+        ]);
+    }
+
+    // processes the edit widget 
+    public function edit_widget($dash_id, $widget_id, Request $request){
+        $widget = DashboardWidget::where('user_id', Auth::id())
+            ->where('id', $widget_id)
+            ->firstOrFail();
+
+        $metadata = json_decode($widget->metadata);
+        // hexcode in field called 'Color'
+        if($request->importColors)
+            $metadata->importColors = true;
+
+        $widget->metadata = json_encode($metadata);
+        $widget->save(); // should be all I need to save the contents of the widget, right?
+        
+        return redirect()->route('profile.dashboard', ['id' => $dash_id]);
+    }
+
     public function delete_widget(Request $request) {
         DashboardWidget::where('user_id', Auth::id())
             ->where('id', $request->id)
@@ -578,7 +619,7 @@ class DashboardController extends Controller
                     'rgb(255, 159, 64)', // orange
                     'rgb(255, 205, 86)', // yellow
                     'rgb(75, 192, 192)', // green
-                    'rgb(153, 102, 255)', // purple
+                    'rgb(66, 33, 99)', // purple omage
                     'rgb(201, 203, 207)' // grey
                 ];
                 foreach($labels as $key)//give all the labels a 'default' color

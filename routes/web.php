@@ -16,6 +16,7 @@ Route::middleware(['auth'])->group(function () {
     Route::put('/profile/update', [ProfileController::class, 'update'])->name('profile.update');
     Route::get('/profile/upload', [ProfileController::class, 'show_files'])->name('profile.upload');
     Route::post('/profile/upload', [FileUploadController::class, 'upload']);
+    Route::post('/profile/delete-upload', [FileUploadController::class, 'delete_file'])->name('profile.delete-upload');
     Route::get('/profile/change-password', [ProfileController::class, 'changepassword'])->name('profile.change-password');
     Route::put('/profile/password', [ProfileController::class, 'password'])->name('profile.password');
     Route::get('/blank-page', [App\Http\Controllers\ProfileController::class, 'blank'])->name('blank');
@@ -25,6 +26,8 @@ Route::middleware(['auth'])->group(function () {
     Route::post('/profile/dashboard/update-bounds', [\App\Http\Controllers\DashboardController::class, 'updateBounds'])->name('dashboard.update-bounds'); //bounds of map update widgets
     Route::get('/profile/add-widgets/{id}', [App\Http\Controllers\DashboardController::class, 'add_widgets'])->name('profile.add-widgets');
     Route::post('/profile/add-widgets/{id}', [App\Http\Controllers\DashboardController::class, 'add_widget']);
+    Route::get('/profile/edit-widgets/{dash_id}/{id}', [App\Http\Controllers\DashboardController::class, 'edit_widgets'])->name('profile.edit-widgets');
+    Route::post('/profile/edit-widgets/{dash_id}/{id}', [App\Http\Controllers\DashboardController::class, 'edit_widget']);
     Route::post('/profile/delete-widget/{id}', [App\Http\Controllers\DashboardController::class, 'delete_widget'])->name('profile.delete-widget');
     Route::post('/profile/delete-dashboard/{id}', [App\Http\Controllers\DashboardController::class, 'delete_dashboard'])->name('profile.delete-dashboard');
     Route::post('/profile/get-file-metadata', [App\Http\Controllers\ProfileController::class, 'get_file_metadata']);
