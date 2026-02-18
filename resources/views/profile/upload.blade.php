@@ -57,6 +57,13 @@
             </div>
         </div>
     </div>
+    <div class="row-mt4">
+        <div class="col-md-3">
+            <div class="card-body">
+                <button>Connect to Postgres</button>
+            </div>
+        </div>
+    </div>
 </div>
 <script>
     document.addEventListener("DOMContentLoaded", function() {
