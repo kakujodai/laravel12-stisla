@@ -302,15 +302,19 @@
 							</div>
 						</div>
 
-						<!-- 
-					here there be drawing
-					-->
+					<!--here there be drawing-->
 					@elseif ($widget['widget_type_id']  == 6)
-						<div>
-						hiiiiiiiiiiiiiiiiiiiiiii
-
-						</div>
-
+						<div id="whiteboard" class="card">
+								<div class="card-header flex-header">	
+									<div>
+									<div class ="card-body">
+									<div id="excal" ></div>
+									@viteReactRefresh
+									@vite('resources/js/app.jsx')
+									</div>
+								</div>
+								</div>
+							</div>
 					@else <!-- Table -->
 						<div  class="col-md-12">
 							<div id="no-resize" class="card">
