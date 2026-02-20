@@ -63,20 +63,20 @@
                                         <option value="YEAH">Normalize multiple values</option>
                                     </select>
 
-                                <div id="x_axis_group" class="form-group" stype="display:none;">
+                                <div id="x_axis_group" class="form-group" style="display:none;">
                                     <label for="x_axis">Select the property you want to use on the x axis.</label>
                                     <select class="form-control mb-2" id="x_axis" name="x_axis">
                                         <option value="">Loading..</option>
                                     </select>
                                 </div>
 
-                                <div id="y_axis_group" class="form-group" stype="display:none;">
+                                <div id="y_axis_group" class="form-group" style="display:none;">
                                     <label for="y_axis">Select the property you want to use on the y axis.</label>
                                     <select class="form-control mb-2" id="y_axis" name="y_axis">
                                         <option value="">Loading..</option>
                                     </select>
                                 </div>
-                                </select>
+                                
                                 <label for="mapLinkID">Decide which map widget to link to</label>
 			                    <select class="form-control mb-2" type="select" id="mapLinkID" name="mapLinkID">
                                     <option value="noLink321π">No Linking</option>
@@ -84,7 +84,7 @@
                                     <option value="{{ array_keys($mapWidgets, $mapWidget, true)[0] }}">{{ $mapWidget }}</option>
                                     @endforeach
 			                    </select>
-                                <div id="norm_form" class="form-group" stype="display:none;">
+                                <div id="norm_form" class="form-group" style="display:none;">
                                     <label for="norm_calc">Select which operation to join with.</label>
                                     <select class="form-control mb-2" id="norm_calc" name="norm_calc">
                                         <option value="average">Average</option>
@@ -93,7 +93,7 @@
                                         <option value="min">Min</option>
                                         <option value="summation">Summation</option>
                                     </select>
-                                    <div id="norm_form1" class="form-group" stype="display:none;">
+                                    <div id="norm_form1" class="form-group" style="display:none;">
                                         <label for="vars">Loading...</label><br>
                                     </div>
                                 </div>

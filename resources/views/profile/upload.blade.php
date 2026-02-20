@@ -57,13 +57,26 @@
             </div>
         </div>
     </div>
-    <div class="row-mt4">
-        <div class="col-md-3">
+    <div class="row mt-4">
+    <div class="col-md-12">
+        <div class="card">
+            <div class="card-header">
+                {{ __('Import GIS Data from PostgreSQL') }}
+            </div>
+
             <div class="card-body">
-                <button>Connect to Postgres</button>
+                <p class="mb-3">
+                    Connect to an external PostgreSQL/PostGIS database and import GIS layers
+                    directly into your dashboard.
+                </p>
+
+                <a href="{{ route('profile.postgres.form') }}" class="btn btn-primary">
+                    Connect to PostgreSQL
+                </a>
             </div>
         </div>
     </div>
+</div>
 </div>
 <script>
     document.addEventListener("DOMContentLoaded", function() {

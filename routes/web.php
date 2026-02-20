@@ -3,6 +3,7 @@
 use App\Http\Controllers\ProfileController;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\FileUploadController;
+use App\Http\Controllers\PostgresImportController;
 
 Route::get('/', function () {
     return redirect()->route('home');
@@ -11,6 +12,11 @@ Route::get('/', function () {
 Auth::routes();
 
 Route::middleware(['auth'])->group(function () {
+    Route::get('/profile/postgres/tables', [PostgresImportController::class, 'showTables'])->name('profile.postgres.tables.show'); //prevents switching from post to get upon refresh
+    Route::post('/profile/postgres/import', [PostgresImportController::class, 'import'])->name('profile.postgres.import');
+    Route::get('/profile/postgres', [PostgresImportController::class, 'create'])->name('profile.postgres.form');
+    Route::post('/profile/postgres/schemas', [PostgresImportController::class, 'schemas'])->name('profile.postgres.schemas');
+    Route::post('/profile/postgres/tables', [PostgresImportController::class, 'tables'])->name('profile.postgres.tables');
     Route::get('/home', [App\Http\Controllers\HomeController::class, 'index'])->name('home');
     Route::get('/profile/edit', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::put('/profile/update', [ProfileController::class, 'update'])->name('profile.update');
