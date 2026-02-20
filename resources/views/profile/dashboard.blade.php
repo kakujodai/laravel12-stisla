@@ -538,11 +538,11 @@
 
 				if (isWidgetLocked(widgetId)) {
 					btn.innerHTML = '<i class="fas fa-lock"></i>';
-					card.classList.remove("widget-locked");
+					card.classList.add("widget-locked");
 				}
 				else {
 					btn.innerHTML = '<i class="fas fa-unlock"></i>';
-					card.classList.add("widget-locked");
+					card.classList.remove("widget-locked");
 				}
 			}
 

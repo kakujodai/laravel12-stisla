@@ -12,8 +12,9 @@
     @endif
 
     <button type="button"
+            id="widgetLockBtn-{{ $widgetId }}"
             class="widget-lock-btn btn btn-sm btn-light"
-            data-widget-id="{{ $widget['id'] }}">
+            data-widget-id="{{ $widgetId }}">
         <i class="fas fa-unlock"></i>
     </button>
 
