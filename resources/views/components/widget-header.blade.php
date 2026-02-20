@@ -2,15 +2,20 @@
     <!-- Left: Title -->
     <span>{{ $name }}</span>
 
-    <!-- Center: Settings Button -->
-    @if ($hasSettings)
+    <!-- Center: Settings Button (only for map widgets) -->
+    @if ($hasSettings && $widgetTypeId == 1)
         <div class="mx-auto position-relative">
-            <!-- Popup menu Depends on widget type -->
-            <a href="{{ route('profile.edit-widgets', ['id' => $widgetId, 'dash_id' => $dashboardId]) }}" method="HEAD" style="display:inline-block;"class="btn btn-primary btn-sm">
+            <a href="{{ route('profile.edit-widgets', ['id' => $widgetId, 'dash_id' => $dashboardId]) }}" method="HEAD" style="display:inline-block;" class="btn btn-primary btn-sm">
                 <i class="fa fa-bars"></i>
             </a>
         </div>
     @endif
+
+    <button type="button"
+            class="widget-lock-btn btn btn-sm btn-light"
+            data-widget-id="{{ $widget['id'] }}">
+        <i class="fas fa-unlock"></i>
+    </button>
 
     <!-- Right: Delete button -->
     <form action="{{ route('profile.delete-widget', ['id' => $widgetId, 'dash_id' => $dashboardId]) }}" method="POST" style="display:inline-block;">

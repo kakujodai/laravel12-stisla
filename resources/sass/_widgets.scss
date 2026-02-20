@@ -1,0 +1,24 @@
+/* Widgets partial - styles for dashboard widgets */
+
+/* Locked widget state */
+.widget-locked {
+  opacity: 0.6;
+  pointer-events: none;
+}
+
+.widget-locked .widget-lock-btn {
+    display: none !important;
+}
+
+/* Button that toggles widget lock, base style */
+.widget-lock-btn {
+  border: none;
+  background: transparent;
+  transition: opacity 0.3s ease, cursor 0.3s ease;
+}
+
+/* Button state when dashboard is locked */
+.widget-locked .widget-lock-btn {
+  opacity: 0.5;
+  cursor: not-allowed;
+}

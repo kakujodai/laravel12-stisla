@@ -16,13 +16,13 @@ class WidgetHeader extends Component
     public $widgetTypeId;
     public $hasSettings;
     /* Create a new component instance. */
-    public function __construct($name, $widgetId, $dashboardId, $randomId = null, $widgetTypeId, $hasSettings = false)
+    public function __construct($name, $widgetId, $dashboardId, $widgetTypeId, $randomId = null, $hasSettings = false)
     {
         $this->name = $name;
         $this->widgetId = $widgetId;
         $this->dashboardId = $dashboardId;
-        $this->randomId = $randomId;
         $this->widgetTypeId = $widgetTypeId;
+        $this->randomId = $randomId;
         $this->hasSettings = $hasSettings;
     }
 
