@@ -586,8 +586,10 @@
 
 				// Set initial UI state for widget lock buttons
 				updateWidgetButtonUI(widgetId);
+			});
+			
 		});
-	</script>
+		</script>
 
 	<script>
 	// Update a Chart.js instance with new labels/datasets

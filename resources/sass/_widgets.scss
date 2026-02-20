@@ -3,7 +3,6 @@
 /* Locked widget state */
 .widget-locked {
   opacity: 0.6;
-  pointer-events: none;
 }
 
 .widget-locked .widget-lock-btn {
@@ -20,7 +19,7 @@
 /* Button state when dashboard is locked */
 .widget-locked .widget-lock-btn {
   opacity: 0.5;
-  cursor: not-allowed;
+  cursor: pointer;
   pointer-events: none;
 }
 
