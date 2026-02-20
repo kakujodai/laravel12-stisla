@@ -529,11 +529,11 @@
 
 				if (isDashboardLocked()) {
 					btn.disabled = true;
-					card.classList.add("widget-locked");
+					card.classList.add("locked-by-dashboard");
 				}
 				else {
 					btn.disabled = false;
-					card.classList.remove("widget-locked");
+					card.classList.remove("locked-by-dashboard");
 				}
 
 				if (isWidgetLocked(widgetId)) {

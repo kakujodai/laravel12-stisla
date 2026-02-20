@@ -21,4 +21,9 @@
 .widget-locked .widget-lock-btn {
   opacity: 0.5;
   cursor: not-allowed;
+  pointer-events: none;
+}
+
+.locked-by-dashboard {
+    color: #888;
 }
