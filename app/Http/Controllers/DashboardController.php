@@ -39,42 +39,46 @@ class DashboardController extends Controller
             $labels = [];
 
             $decode_metadata = json_decode($get_widget['metadata'], true) ?: [];
+            $get_widget['layout'] = $decode_metadata['layout'] ?? [];
             $get_map_filename = $decode_metadata['map_filename'] ?? null;
 
             if ($get_widget['widget_type_id'] == 1) {
+                $get_widget['random_id'] = $get_widget['id'];
+                $get_widget['filename'] = null;
+                $get_widget['map_json'] = null;
+
                 if ($get_map_filename) {
                     $get_widget['map_json'] = Storage::get("users/{$userId}/{$get_map_filename}");
-                    $get_widget['random_id'] = $get_widget['id'];
-                    $get_widget['filename']  = preg_replace('/[^A-Za-z0-9\_\.]/', '', basename($get_map_filename));
+                    $get_widget['filename'] = preg_replace('/[^A-Za-z0-9\_\.]/', '', basename($get_map_filename));
                 }
-                if(array_key_exists('importColors',$decode_metadata) && $decode_metadata['importColors'])
+
+                if (array_key_exists('importColors', $decode_metadata) && $decode_metadata['importColors']) {
                     $get_widget['importColor'] = true;
-                else
+                } else {
                     $get_widget['importColor'] = false;
+                }
             }
-            elseif ($get_widget['widget_type_id'] == 5) { # TABLE!
+            elseif ($get_widget['widget_type_id'] == 5) { // TABLE
                 $geojson = FileUpload::select('geojson')
                     ->where('user_id', '=', Auth::id())
                     ->where('filename', '=', $get_map_filename)
                     ->value('geojson');
 
                 $json_version = json_decode($geojson, true);
+
                 if (!is_array($json_version) || ($json_version['type'] ?? '') !== 'FeatureCollection') {
-                    // fallback: empty table
                     $get_widget['random_id'] = Str::random();
                     $get_widget['table'] = [];
                     $get_widget['table_headings'] = [];
+                    $get_widget['visible_columns'] = [];
                 } else {
-                    // Use the order the user picked in the metadata
                     $picked = $decode_metadata['table_columns'] ?? [];
                     $table_keys = array_values(array_filter($picked, fn($k) => is_string($k) && $k !== ''));
 
-                    // If user somehow saved none, derive from first feature
                     if (empty($table_keys) && !empty($json_version['features'][0]['properties'])) {
                         $table_keys = array_keys($json_version['features'][0]['properties']);
                     }
 
-                    // Build rows deterministically in the same order as $table_keys
                     $value_md = [];
                     foreach ($json_version['features'] as $feature) {
                         $props = $feature['properties'] ?? [];
@@ -92,58 +96,72 @@ class DashboardController extends Controller
                 }
             }
             elseif ($get_widget['widget_type_id'] > 1 && $get_widget['widget_type_id'] <= 4) { // CHARTS
+                $get_widget['chart'] = null;
+                $get_widget['map_link_id'] = $decode_metadata['mapLinkID'] ?? 'noLink321π';
+                $get_widget['category_warning'] = false;
+
                 if ($get_map_filename) {
                     $geojson = FileUpload::where('filename', $get_map_filename)
                         ->where('user_id', $userId)
                         ->value('geojson');
 
                     $json_version = json_decode($geojson ?? '[]', true);
+                    $features = $json_version['features'] ?? [];
 
-                    // replacing the calculation bits with a call to a function to centralize it all
-                    if (!array_key_exists('norm', $decode_metadata))// backwards compatibility...
+                    if (!array_key_exists('norm', $decode_metadata)) {
                         $decode_metadata['norm'] = 'NOPE';
-                    if($decode_metadata['norm'] == 'NOPE'){
-                        $results = $this->calculateChartData($decode_metadata['x_axis'], $decode_metadata['y_axis'], $json_version['features'], $get_widget['widget_type_id']);
                     }
-                    else{
-                        $results = $this->compressDatasets($decode_metadata['norm_axis'], $decode_metadata['norm_calc'], $json_version['features'], 0);
+
+                    if ($decode_metadata['norm'] == 'NOPE') {
+                        $results = $this->calculateChartData(
+                            $decode_metadata['x_axis'],
+                            $decode_metadata['y_axis'],
+                            $features,
+                            $get_widget['widget_type_id']
+                        );
+                    } else {
+                        $results = $this->compressDatasets(
+                            $decode_metadata['norm_axis'],
+                            $decode_metadata['norm_calc'],
+                            $features,
+                            0
+                        );
                     }
+
                     $labels = $results['labels'];
                     $values = $results['values'];
                     $categoryWarning = $results['catWarning'];
-                    unset($results);// I dunno, feels nice
+                    unset($results);
 
                     $chart_types    = [2 => 'line', 3 => 'bar', 4 => 'pie', 5 => 'table'];
                     $label_location = ($get_widget['widget_type_id'] == 4) ? 'right' : 'top';
                     $colorMap       = $this->getColorArray($get_widget, $labels);
 
                     $chart = Chartjs::build()
-                        ->name("Chart".Str::random())
+                        ->name("Chart" . Str::random())
                         ->type($chart_types[$get_widget['widget_type_id']])
                         ->size(['width' => 400, 'height' => 200])
                         ->labels($labels)
                         ->datasets([[
-                            "label"        => $decode_metadata['x_axis'] ?? '',
-                            "data"         => $values,
-                            "fill"         => true,
-                            "pointRadius"  => 0,
-                            "borderWidth"  => 1,
+                            "label" => $decode_metadata['x_axis'] ?? '',
+                            "data" => $values,
+                            "fill" => true,
+                            "pointRadius" => 0,
+                            "borderWidth" => 1,
                             "backgroundColor" => $colorMap,
                         ]])
                         ->options([
                             "interaction" => ["mode" => "nearest", "intersect" => false],
-                            "hover"       => ["mode" => "nearest", "intersect" => false],
-                            "plugins"     => ["legend" => ["position" => $label_location]],
-                            "responsive"  => true,
+                            "hover" => ["mode" => "nearest", "intersect" => false],
+                            "plugins" => ["legend" => ["position" => $label_location]],
+                            "responsive" => true,
                             "maintainAspectRatio" => false,
                         ]);
 
-                    $get_widget['chart']        = $chart;
-                    $get_widget['map_link_id']  = $decode_metadata['mapLinkID'] ?? 'noLink321π'; // <-- expose to Blade
-                    $get_widget['category_warning'] = $categoryWarning; // optional: attach flag if you ever want to expose it in Blade
+                    $get_widget['chart'] = $chart;
+                    $get_widget['category_warning'] = $categoryWarning;
                 }
             }
-
         }
 
         $get_widget_types = DashboardWidgetType::get();
@@ -603,6 +621,34 @@ class DashboardController extends Controller
             'category_warning' => $categoryWarning,
         ]);
 
+    }
+    public function save_widget_layout(Request $request)
+    {
+        $request->validate([ 
+            'widget_id' => ['required', 'integer'],
+            'top'       => ['required', 'numeric'],
+            'left'      => ['required', 'numeric'],
+            'width'     => ['nullable', 'numeric'],
+            'height'    => ['nullable', 'numeric'],
+        ]);
+
+        $widget = DashboardWidget::where('user_id', Auth::id())
+            ->where('id', $request->widget_id)
+            ->firstOrFail();
+
+        $meta = json_decode($widget->metadata, true) ?: [];
+
+        $meta['layout'] = [ //make new metadata and store location shenanigans in it
+            'top'    => (int) $request->top,
+            'left'   => (int) $request->left,
+            'width'  => $request->width !== null ? (int) $request->width : null,
+            'height' => $request->height !== null ? (int) $request->height : null,
+        ];
+
+        $widget->metadata = json_encode($meta);
+        $widget->save();
+
+        return response()->json(['success' => true]);
     }
 
     private function getColorArray($widgetFile, $labels){

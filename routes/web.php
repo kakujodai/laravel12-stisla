@@ -4,6 +4,7 @@ use App\Http\Controllers\ProfileController;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\FileUploadController;
 use App\Http\Controllers\PostgresImportController;
+use App\Http\Controllers\DashboardController;
 
 Route::get('/', function () {
     return redirect()->route('home');
@@ -12,6 +13,7 @@ Route::get('/', function () {
 Auth::routes();
 
 Route::middleware(['auth'])->group(function () {
+    Route::post('/profile/dashboard/save-widget-layout', [DashboardController::class, 'save_widget_layout']) ->name('profile.dashboard.save-widget-layout');
     Route::get('/profile/postgres/tables', [PostgresImportController::class, 'showTables'])->name('profile.postgres.tables.show'); //prevents switching from post to get upon refresh
     Route::post('/profile/postgres/import', [PostgresImportController::class, 'import'])->name('profile.postgres.import');
     Route::get('/profile/postgres', [PostgresImportController::class, 'create'])->name('profile.postgres.form');
