@@ -372,36 +372,49 @@
                     </div>
                 </div>
 
-            @elseif ($widget['widget_type_id'] > 1 && $widget['widget_type_id'] <= 4)
-                <div
-                    id="widget-{{ $widget['id'] }}"
-                    class="dashboard-widget chart-widget-wrap"
-                    data-widget-id="{{ $widget['id'] }}"
-                    style="top: {{ $top }}px; left: {{ $left }}px; width: {{ $width }}px; height: {{ $height }}px;"
-                >
-                    <div class="card">
-                        <div class="card-header flex-header">
-                            {{ $widget['name'] }}
-                            <form action="{{ route('profile.delete-widget', ['id' => $widget['id'], 'dash_id' => $dashboard_info['id']]) }}" method="POST" style="display: inline-block;">
-                                @csrf
-                                <button type="submit" class="btn btn-secondary rounded-sm fas fa-trash"></button>
-                            </form>
-                        </div>
-
-                        <div class="card-body" style="height: calc(100% - 56px);">
-                            <div class="no-sort chart-widget"
-                                data-widget-id="{{ $widget['id'] }}"
-                                data-map-link-id="{{ $widget['map_link_id'] ?? 'noLink321π' }}"
-                                style="height: 100%; width: 100%;">
-                                @if (!$widget['chart'])
-                                    <b>Failed to produce results with selected parameters.</b>
-                                @else
-                                    <x-chartjs-component :chart="$widget['chart']" />
-                                @endif
-                            </div>
-                        </div>
-                    </div>
-                </div>
+				@elseif ($widget['widget_type_id'] > 1 && $widget['widget_type_id'] <= 4) <!-- Charts -->
+                    <div
+                        id="widget-{{ $widget['id'] }}"
+                        class="dashboard-widget chart-widget-wrap"
+                        data-widget-id="{{ $widget['id'] }}"
+                        style="top: {{ $top }}px; left: {{ $left }}px; width: {{ $width }}px; height: {{ $height }}px;"
+                    >
+                        <div class="card">
+                            <x-widget-header 
+   									:name="$widget['name']" 
+						    		:widget-id="$widget['id']" 
+						    		:dashboard-id="$dashboard_info['id']" 
+									:random-id="$widget['random_id']"
+									:widget-type-id="$widget['widget_type_id']" 
+									:has-settings="true"
+								/>
+                    @if ($widget['widget_type_id'] == 4) <!-- I'm a wide chart -->
+						<div class="col-md-3">
+					@else
+						<div class="col-md-6">
+					@endif
+							<div id="sortable-cards{{ $widget['id'] }}" class="card">
+								<div class="card-header flex-header">
+									{{$widget['name']}}
+									<form action="{{ route('profile.delete-widget', ['id' => $widget['id'], 'dash_id' => $dashboard_info['id']]) }}" method="POST" style="display: inline-block;">
+										@csrf
+										<button type="submit" class="btn btn-secondary rounded-sm fas fa-trash"></button>
+									</form>
+								</div>
+								<div class="card-body" style="height: calc(100% - 56px);">
+									<div class="no-sort chart-widget"
+										data-widget-id="{{ $widget['id'] }}"
+										data-map-link-id="{{ $widget['map_link_id'] ?? 'noLink321π' }}"
+										style="height: 100%; width: 100%;">
+									@if (!$widget['chart'])
+										<b>Failed to produce results with selected parameters.</b>
+									@else
+										<x-chartjs-component :chart="$widget['chart']" />
+									@endif
+									</div>
+								</div>
+							</div>
+						</div>
 
             @else
                 <div

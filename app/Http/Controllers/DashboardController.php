@@ -480,19 +480,20 @@ class DashboardController extends Controller
         $dashboard_info = Dashboard::where('user_id', Auth::id())->where('id', $dash_id)->get();
         $widgets = DashboardWidget::where('dashboard_id', $dash_id)->get();
         $my_files = FileUpload::select('filename', 'title')->where('user_id', Auth::id())->get();
-        $get_widget_types = DashboardWidgetType::get();
         $mapWidgetList = [];
         foreach ($widgets as $widget) {
             if ($widget->widget_type_id == 1) $mapWidgetList[$widget->id] = $widget->name;
             if ($widget->id == $id) $chosenOne = $widget;
         }
+        $metadata = json_decode($widget->metadata, true);
 
         return view('profile.edit-widgets', [
             'dashboard_info' => $dashboard_info[0],
-            'widget_types'   => $get_widget_types,  // sets initial form of edit page
             'mapWidgets'     => $mapWidgetList,     // for if editing a graph widget
             'files'          => $my_files,
             'widget'         => $chosenOne,         // chosen widget to edit
+            'widget_type'    => $chosenOne['widget_type_id'],
+            'metadata'       => $metadata,
         ]);
     }
 
@@ -502,11 +503,35 @@ class DashboardController extends Controller
             ->where('id', $widget_id)
             ->firstOrFail();
 
-        $metadata = json_decode($widget->metadata);
-        // hexcode in field called 'Color'
-        if($request->importColors)
-            $metadata->importColors = true;
+        $metadata = json_decode($widget->metadata, true);
 
+        // widget is a map
+        if($widget['widget_type_id'] == 1){
+            // hexcode in field called 'Color'
+            if($request->importColors)
+                $metadata->importColors = true;
+        }
+        // widget is a graph
+        else if($widget['widget_type_id'] > 2 && $widget['widget_type_id'] < 5){
+            // color keys are having their spaces getting replaced by underscores...
+            $request = $request->request;
+            foreach ($request as $key => $color){
+                // if the key starts with 'color' then it's to change the color map
+                if(!strncmp($key, 'color', 5)){
+                    $color = $request->get($key);
+                    $key = substr($key, 5);
+                    if(!preg_match('/^#[a-f0-9]{6}$/i', $color))
+                        continue; // check the color is a valid hex color
+                    if(array_key_exists($key, $metadata['colorMap'])) // check to make sure that the key is in the color map
+                        $metadata['colorMap'][$key] = $color; // testing
+                    else if (array_key_exists(str_replace('_', ' ', $key), $metadata['colorMap']))
+                        $metadata['colorMap'][str_replace('_', ' ', $key)] = $color; // testing
+                }
+            }
+        }
+        else if($widget['widget_type_id' == 2]){
+            // still have to implement line graph color support
+        }
         $widget->metadata = json_encode($metadata);
         $widget->save(); // should be all I need to save the contents of the widget, right?
         
@@ -660,70 +685,30 @@ class DashboardController extends Controller
             if(is_array($labels)){
                 // default colors from chartjs
                 $defaultColors = [
-                    'rgb(54, 162, 235)', // blue
-                    'rgb(255, 99, 132)', // red
-                    'rgb(255, 159, 64)', // orange
-                    'rgb(255, 205, 86)', // yellow
-                    'rgb(75, 192, 192)', // green
-                    'rgb(66, 33, 99)', // purple omage
-                    'rgb(201, 203, 207)' // grey
+                    '#36a2eb', // blue
+                    '#ff6384', // red
+                    '#ff9f40', // orange
+                    '#ffcd56', // yellow
+                    '#4bc0c0', // green
+                    '#422163', // purple omage
+                    '#c9cbcf' // grey
                 ];
                 foreach($labels as $key)//give all the labels a 'default' color
                     $metadata['colorMap'][$key] = $defaultColors[sizeof($metadata['colorMap']) % sizeof($defaultColors)];
             
                 //$metadata['colorMap'][$labels[0]] = '#31220b';//testing testing
             }
-            $widgetFile->metadata = json_encode($metadata, true);
+            $widgetFile->metadata = json_encode($metadata);
             $widgetFile->save();
         }
 
         if (is_array($labels)) {
             $curatedColor = [];
             foreach ($labels as $key) 
-                $curatedColor[] = $metadata['colorMap'][$key] ?? '#999';
+                $curatedColor[] = $metadata['colorMap'][$key] ?? '#999999';
             return $curatedColor;
         }
         return $metadata['colorMap'];
-    }
-
-    // public function that returns an associative array of widget colors, key => color 
-    // filtering with key array is optional
-    public function getWidgetColors(Request $request){
-        $request->validate([
-            'widget_id' => ['required', 'integer'],
-        ]);
-        $userId = Auth::id();
-        // 1) Find the widget and ensure it belongs to the user
-        $widget = DashboardWidget::where('user_id', $userId)
-            ->where('id', $request->integer('widget_id'))
-            ->firstOrFail();
-        return response()->json(json_encode(getColorArray($widget, $request->keys), true));
-    }
-    // public function to call when you want to change a color in metadata['colorMap']
-    public function changeColor(Request $request){
-        $request->validate([
-            'widget_id' => ['required', 'integer'],
-            'key' => ['required', 'string'],
-            'color' => ['required', 'string'],
-        ]);
-
-        $userId = Auth::id();
-
-        // 1) Find the widget and ensure it belongs to the user
-        $widget = DashboardWidget::where('user_id', $userId)
-            ->where('id', $request->widget_id)
-            ->firstOrFail();
-
-        $meta = json_decode($widget->metadata, true);
-        $color = $request->string('color');
-        $key = $request->string('key');
-
-        //key exists in array and our requested color is in fact a hex code
-        if(array_key_exists($key, $meta['colorMap']) && (preg_match('/^#[a-f0-9]{6}$/i', $color)))
-            $meta['colorMap'][$key] = $color;
-
-        $widget->metadata = json_encode($meta, true);
-        $widget->save();
     }
 
 /**
