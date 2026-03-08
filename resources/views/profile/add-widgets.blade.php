@@ -63,14 +63,14 @@
                                         <option value="YEAH">Normalize multiple values</option>
                                     </select>
 
-                                <div id="x_axis_group" class="form-group" style="display:none;">
+                                <div id="x_axis_group" class="form-group">
                                     <label for="x_axis">Select the property you want to use on the x axis.</label>
                                     <select class="form-control mb-2" id="x_axis" name="x_axis">
                                         <option value="">Loading..</option>
                                     </select>
                                 </div>
 
-                                <div id="y_axis_group" class="form-group" style="display:none;">
+                                <div id="y_axis_group" class="form-group">
                                     <label for="y_axis">Select the property you want to use on the y axis.</label>
                                     <select class="form-control mb-2" id="y_axis" name="y_axis">
                                         <option value="">Loading..</option>
@@ -84,7 +84,7 @@
                                     <option value="{{ array_keys($mapWidgets, $mapWidget, true)[0] }}">{{ $mapWidget }}</option>
                                     @endforeach
 			                    </select>
-                                <div id="norm_form" class="form-group" style="display:none;">
+                                <div id="norm_form" class="form-group">
                                     <label for="norm_calc">Select which operation to join with.</label>
                                     <select class="form-control mb-2" id="norm_calc" name="norm_calc">
                                         <option value="average">Average</option>

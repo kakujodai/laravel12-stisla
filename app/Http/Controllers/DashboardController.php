@@ -135,7 +135,7 @@ class DashboardController extends Controller
 
                     $chart_types    = [2 => 'line', 3 => 'bar', 4 => 'pie', 5 => 'table'];
                     $label_location = ($get_widget['widget_type_id'] == 4) ? 'right' : 'top';
-                    $colorMap       = $this->getColorArray($get_widget, $labels);
+                    $colorMap       = $this->getColorArray($get_widget['id'], $labels);
 
                     $chart = Chartjs::build()
                         ->name("Chart" . Str::random())
@@ -597,7 +597,7 @@ class DashboardController extends Controller
         if(!array_key_exists('norm', $meta))
             $meta['norm'] = "NOPE";
         if ($meta['norm'] == "NOPE" && (!$xAxis || !$yAxis || !$mapFilename)) {
-            return response()->json(['labels' => [], 'datasets' => ['backgroundColor' => $this->getColorArray($widget, $labels)]]);
+            return response()->json(['labels' => [], 'datasets' => ['backgroundColor' => $this->getColorArray($widget['id'], $labels)]]);
         }
 
         $geo = FileUpload::where('filename', $mapFilename)
@@ -641,7 +641,7 @@ class DashboardController extends Controller
                 'fill'  => true,
                 'pointRadius' => 0,
                 'borderWidth' => 1,
-                'backgroundColor' => $this->getColorArray($widget, $labels),
+                'backgroundColor' => $this->getColorArray($widget['id'], $labels),
             ]],
             'category_warning' => $categoryWarning,
         ]);
@@ -676,7 +676,10 @@ class DashboardController extends Controller
         return response()->json(['success' => true]);
     }
 
-    private function getColorArray($widgetFile, $labels){
+    private function getColorArray($widgetID, $labels){
+        $widgetFile = DashboardWidget::where('user_id', Auth::id())
+            ->where('id', $widgetID)
+            ->firstOrFail();
         $metadata = json_decode($widgetFile->metadata, true);
 
         // initialize color map if there isn't one
