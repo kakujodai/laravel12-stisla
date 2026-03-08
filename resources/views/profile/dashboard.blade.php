@@ -388,19 +388,7 @@
 									:widget-type-id="$widget['widget_type_id']" 
 									:has-settings="true"
 								/>
-                    @if ($widget['widget_type_id'] == 4) <!-- I'm a wide chart -->
-						<div class="col-md-3">
-					@else
-						<div class="col-md-6">
-					@endif
 							<div id="sortable-cards{{ $widget['id'] }}" class="card">
-								<div class="card-header flex-header">
-									{{$widget['name']}}
-									<form action="{{ route('profile.delete-widget', ['id' => $widget['id'], 'dash_id' => $dashboard_info['id']]) }}" method="POST" style="display: inline-block;">
-										@csrf
-										<button type="submit" class="btn btn-secondary rounded-sm fas fa-trash"></button>
-									</form>
-								</div>
 								<div class="card-body" style="height: calc(100% - 56px);">
 									<div class="no-sort chart-widget"
 										data-widget-id="{{ $widget['id'] }}"
