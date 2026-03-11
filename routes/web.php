@@ -3,6 +3,7 @@
 use App\Http\Controllers\ProfileController;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\FileUploadController;
+use App\Http\Controllers\PostgresImportController;
 
 Route::get('/', function () {
     return redirect()->route('home');
@@ -11,6 +12,11 @@ Route::get('/', function () {
 Auth::routes();
 
 Route::middleware(['auth'])->group(function () {
+    Route::get('/profile/postgres/tables', [PostgresImportController::class, 'showTables'])->name('profile.postgres.tables.show'); //prevents switching from post to get upon refresh
+    Route::post('/profile/postgres/import', [PostgresImportController::class, 'import'])->name('profile.postgres.import');
+    Route::get('/profile/postgres', [PostgresImportController::class, 'create'])->name('profile.postgres.form');
+    Route::post('/profile/postgres/schemas', [PostgresImportController::class, 'schemas'])->name('profile.postgres.schemas');
+    Route::post('/profile/postgres/tables', [PostgresImportController::class, 'tables'])->name('profile.postgres.tables');
     Route::get('/home', [App\Http\Controllers\HomeController::class, 'index'])->name('home');
     Route::get('/profile/edit', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::put('/profile/update', [ProfileController::class, 'update'])->name('profile.update');
@@ -33,6 +39,9 @@ Route::middleware(['auth'])->group(function () {
     Route::post('/profile/get-file-metadata', [App\Http\Controllers\ProfileController::class, 'get_file_metadata']);
     Route::get('/profile/get-geojson/{filename}', [App\Http\Controllers\DashboardController::class, 'get_geojson'])->name('profile.get-geojson');
     Route::post('/profile/widget-columns', [App\Http\Controllers\DashboardController::class, 'saveWidgetColumns'])->name('profile.save-widget-columns');
+    Route::post('/profile/save-widget-layout', [App\Http\Controllers\ProfileController::class, 'saveWidgetLayout'])->name('profile.save-widget-layout');
+    Route::post('/profile/save-widget-lock', [App\Http\Controllers\ProfileController::class, 'saveWidgetLock'])->name('profile.save-widget-lock');
+    Route::post('/profile/save-dashboard-lock', [App\Http\Controllers\ProfileController::class, 'saveDashboardLock'])->name('profile.save-dashboard-lock');
 
     Route::get('/hakakses', [App\Http\Controllers\HakaksesController::class, 'index'])->name('hakakses.index')->middleware('superadmin');
     Route::get('/hakakses/edit/{id}', [App\Http\Controllers\HakaksesController::class, 'edit'])->name('hakakses.edit')->middleware('superadmin');

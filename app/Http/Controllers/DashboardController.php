@@ -38,7 +38,7 @@ class DashboardController extends Controller
             $values_md = [];
             $labels = [];
 
-            $decode_metadata = json_decode($get_widget['metadata'], true) ?: [];
+            $decode_metadata = $this->decodeMeta($get_widget->metadata ?? $get_widget['metadata'] ?? []);
             $get_map_filename = $decode_metadata['map_filename'] ?? null;
 
             if ($get_widget['widget_type_id'] == 1) {
@@ -155,6 +155,19 @@ class DashboardController extends Controller
         ];
 
         return view('profile.dashboard', $array);
+    }
+
+    /**
+     * Safely decode metadata which may already be an array (model cast) or a JSON string.
+     */
+    private function decodeMeta($meta): array
+    {
+        if (is_array($meta)) return $meta;
+        if (is_string($meta)) {
+            $decoded = json_decode($meta, true);
+            return is_array($decoded) ? $decoded : [];
+        }
+        return [];
     }
     private function compressDatasets($inputs, $calculation, $dataset, $toJSON){
         if(!is_array($inputs) || !is_array($dataset) || !is_string($calculation))
@@ -483,13 +496,13 @@ class DashboardController extends Controller
         $widget = DashboardWidget::where('user_id', Auth::id())
             ->where('id', $widget_id)
             ->firstOrFail();
-
-        $metadata = json_decode($widget->metadata);
+        $metadata = $this->decodeMeta($widget->metadata);
         // hexcode in field called 'Color'
-        if($request->importColors)
-            $metadata->importColors = true;
+        if ($request->importColors) {
+            $metadata['importColors'] = true;
+        }
 
-        $widget->metadata = json_encode($metadata);
+        $widget->metadata = $metadata;
         $widget->save(); // should be all I need to save the contents of the widget, right?
         
         return redirect()->route('profile.dashboard', ['id' => $dash_id]);
@@ -541,7 +554,7 @@ class DashboardController extends Controller
             return response()->json(['labels' => [], 'datasets' => []]);
         }
 
-        $meta = json_decode($widget->metadata, true) ?: [];
+        $meta = $this->decodeMeta($widget->metadata);
         $xAxis = $meta['x_axis'] ?? null;
         $yAxis = $meta['y_axis'] ?? null;
         $mapFilename = $meta['map_filename'] ?? null;
@@ -606,7 +619,7 @@ class DashboardController extends Controller
     }
 
     private function getColorArray($widgetFile, $labels){
-        $metadata = json_decode($widgetFile->metadata, true);
+        $metadata = $this->decodeMeta($widgetFile->metadata);
 
         // initialize color map if there isn't one
         if(!array_key_exists('colorMap', $metadata)){
@@ -668,7 +681,7 @@ class DashboardController extends Controller
             ->where('id', $request->widget_id)
             ->firstOrFail();
 
-        $meta = json_decode($widget->metadata, true);
+        $meta = $this->decodeMeta($widget->metadata);
         $color = $request->string('color');
         $key = $request->string('key');
 

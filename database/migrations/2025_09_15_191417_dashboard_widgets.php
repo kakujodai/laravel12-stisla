@@ -18,6 +18,10 @@ return new class extends Migration
             $table->integer('widget_type_id');
             $table->string('name');
             $table->integer('order')->nullable();
+            // logical column for layout (e.g. 0,1,2)
+            $table->integer('layout_column')->nullable();
+            // server-side per-widget lock
+            $table->boolean('is_locked')->default(false);
             $table->json('metadata');
             $table->timestamps();
         });

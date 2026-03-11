@@ -110,9 +110,9 @@
 			</script>
 
             @foreach ($widgets as $widget)
-                @if ($widget['widget_type_id'] == 1) <!-- I'm the map, i'm the map (he's the map, he's the map) I'M THE MAP!-->
-                <div class="col-md-4">
-                    <div id="sortable-cards{{ $widget['id'] }}" class="card">
+				@if ($widget['widget_type_id'] == 1) <!-- I'm the map, i'm the map (he's the map, he's the map) I'M THE MAP!-->
+				<div class="col-md-4">
+					<div id="sortable-cards{{ $widget['id'] }}" class="card widget-card" data-widget-id="{{ $widget['id'] }}" data-server-locked="{{ !empty($widget['is_locked']) ? '1' : '0' }}" data-layout-column="{{ is_array($widget['metadata'] ?? null) ? ($widget['metadata']['column'] ?? '') : (json_decode($widget['metadata'] ?? '[]', true)['column'] ?? '') }}">
                         <x-widget-header 
    							:name="$widget['name']" 
 						    :widget-id="$widget['id']" 
@@ -291,15 +291,14 @@
 					@else
 						<div class="col-md-6">
 					@endif
-							<div id="sortable-cards{{ $widget['id'] }}" class="card">
-								<x-widget-header
-									:name="$widget['name']"
-									:widget-id="$widget['id']"
-									:dashboard-id="$dashboard_info['id']"
-									:random-id="$widget['random_id']"
-									:widget-type-id="$widget['widget_type_id']"
-									:has-settings="false"
-								/>
+							<div id="sortable-cards{{ $widget['id'] }}" class="card widget-card" data-widget-id="{{ $widget['id'] }}" data-server-locked="{{ !empty($widget['is_locked']) ? '1' : '0' }}" data-layout-column="{{ is_array($widget['metadata'] ?? null) ? ($widget['metadata']['column'] ?? '') : (json_decode($widget['metadata'] ?? '[]', true)['column'] ?? '') }}">
+								<div class="card-header flex-header">
+									{{$widget['name']}}
+									<form action="{{ route('profile.delete-widget', ['id' => $widget['id'], 'dash_id' => $dashboard_info['id']]) }}" method="POST" style="display: inline-block;">
+										@csrf
+										<button type="submit" class="btn btn-secondary rounded-sm fas fa-trash"></button>
+									</form>
+								</div>
 								<div class="card-body">
 									<div class="no-sort chart-widget"
 										data-widget-id="{{ $widget['id'] }}"
@@ -317,15 +316,22 @@
 
 					@else <!-- Table -->
 						<div  class="col-md-12">
-							<div id="no-resize" class="card">
-								<x-widget-header
-									:name="$widget['name']"
-									:widget-id="$widget['id']"
-									:dashboard-id="$dashboard_info['id']"
-									:random-id="$widget['random_id']"
-									:widget-type-id="$widget['widget_type_id']"
-									:has-settings="false"
-								/>
+							<div id="no-resize-{{ $widget['id'] }}" class="card widget-card" data-widget-id="{{ $widget['id'] }}" data-server-locked="{{ !empty($widget['is_locked']) ? '1' : '0' }}" data-layout-column="{{ is_array($widget['metadata'] ?? null) ? ($widget['metadata']['column'] ?? '') : (json_decode($widget['metadata'] ?? '[]', true)['column'] ?? '') }}">
+								<div class="card-header">
+									<div class="row">
+										<div class="col-sm-10 text-left">
+											<h2 class="card-title">{{$widget['name']}}</h2>
+										</div>
+										<div class="col-sm-2">
+											<div class="btn-group float-right ms-2">
+												<form id="delete-{{ $widget['id'] }}" action="{{ route('profile.delete-widget', ['id' => $widget['id'], 'dash_id' => $dashboard_info['id']]) }}" method="POST" style="display: inline-block;">
+													@csrf
+													<button type="submit" class="btn btn-sm btn-warning rounded-sm fas fa-trash"></button>
+												</form>
+											</div>
+										</div>
+									</div>
+								</div>
 
 								{{-- Column selector UI (styled box with Select2) --}}
 								<div class="px-3 pb-2">
@@ -432,46 +438,27 @@
 	<script>
 		// That sweet sweet moving cards trick
 		document.addEventListener("DOMContentLoaded", function() {
-			//Script that runs drag/resize and lock/unlock for dashboard and widgets
 
+			const lockBtn = document.getElementById("dashboardLockBtn");
 			const dashboardId = "{{ $dashboard_info['id'] }}";
-			const dashLockBtn = document.getElementById("dashboardLockBtn");
+			const storageKey = "dashboardLock:" + dashboardId;
 
-			// Get Lock key for entire dashboard
-			function getLockKey(widgetId) {
-				return `widgetLock:dash${dashboardId}:widget${widgetId}`;
-			}
-
-			//Function to check if dashboard is locked. Dashboard lock overrides individual widget locks
-			function isDashboardLocked() {
-				return localStorage.getItem(`dashboardLock:${dashboardId}`) === "true";
-			}
-
-			//Function Checks all widgets if dashboard is locked or individual widget if their lock is set
-			function isWidgetLocked(widgetId) {
-				const widgetLocked = localStorage.getItem(getLockKey(widgetId)) === "true";
-				return isDashboardLocked() || widgetLocked;	
-			}
-
-			function setDashboardLock(locked) {
-				localStorage.setItem(`dashboardLock:${dashboardId}`, locked);
-			}
-
-			// Function to set lock state
-			function setWidgetLock(widgetId, locked) {
-				localStorage.setItem(getLockKey(widgetId), locked);
-			}
-
-			// Functions to enable/disable dragging
+			// Functions to enable/disable dragging and update button state
 			function enableDragging() {
 				$(".card").draggable("enable");
-        		$(".card").resizable("enable");
-        		$("#none_shall_pass").removeClass("dashboard-locked");
+		        $(".card").resizable("enable");
+		        $("#none_shall_pass").removeClass("dashboard-locked");
+		        if (typeof $ !== 'undefined' && typeof $.fn.sortable === 'function') {
+					$('.sortable-list').sortable('enable');
+				}
 			}
 			function disableDragging() {
 				$(".card").draggable("disable");
 				$(".card").resizable("disable");
 				$("#none_shall_pass").addClass("dashboard-locked");
+				if (typeof $ !== 'undefined' && typeof $.fn.sortable === 'function') {
+					$('.sortable-list').sortable('disable');
+				}
 			}
 			
 			function initDragResize() {
@@ -482,24 +469,16 @@
 				containment: "#none_shall_pass", // Make sure you can't put the card outside of this div
 				cancel: ".no-sort", // Make sure we don't attempt to move the card when we're actually in the map panning
 				stop: function(event, ui) {
-					if (isDashboardLocked())
+					if (isLocked())
 						return;
-					const widgetId = this.id.replace('sortable-cards', '');
-					if (isWidgetLocked(widgetId))
-						return;
-					
 					var positions = JSON.parse(localStorage.positions || "{}");
 					positions[this.id] = ui.position; // Store by element ID
 					localStorage.positions = JSON.stringify(positions);
 				}
 				}).resizable({
 					stop: function(event, ui) {
-						if (isDashboardLocked())
+						if (isLocked())
 							return;
-						const widgetId = this.id.replace('sortable-cards', '');
-						if (isWidgetLocked(widgetId))
-							return;
-
 						var positions = JSON.parse(localStorage.positions || "{}");
 						positions[this.id] = ui.position; // Store by element ID
 						positions[this.id].width = ui.size.width;
@@ -508,30 +487,45 @@
 					}
 				});
 			}
-			
-			function updateDashButtonUI() {
-        		if (isDashboardLocked()) {
-            		dashLockBtn.innerHTML = '<i class="fas fa-unlock"></i> Unlock Dashboard';
+
+			function isLocked() {
+				return localStorage.getItem(storageKey) === "true";
+			}
+
+			function updateButtonUI() {
+        		if (isLocked()) {
+            		lockBtn.innerHTML = '<i class="fas fa-unlock"></i> Unlock Dashboard';
             		disableDragging();
         		}
 				else {
-            		dashLockBtn.innerHTML = '<i class="fas fa-lock"></i> Lock Dashboard';
+            		lockBtn.innerHTML = '<i class="fas fa-lock"></i> Lock Dashboard';
             		enableDragging();
         		}
     		}
 
+			// Per-widget lock helpers + UI
+			function getWidgetLockKey(widgetId) {
+				return `widgetLock:dash${dashboardId}:widget${widgetId}`;
+			}
+
+			function isWidgetLocked(widgetId) {
+				const widgetLocked = localStorage.getItem(getWidgetLockKey(widgetId)) === "true";
+				return isLocked() || widgetLocked;
+			}
+
+			function setWidgetLock(widgetId, locked) {
+				localStorage.setItem(getWidgetLockKey(widgetId), locked);
+			}
+
 			function updateWidgetButtonUI(widgetId) {
 				const btn = document.getElementById(`widgetLockBtn-${widgetId}`);
-				const card = document.getElementById(`sortable-cards${widgetId}`);
+				const card = document.querySelector(`[data-widget-id="${widgetId}"]`) || document.getElementById(`sortable-cards${widgetId}`);
+				if (!btn || !card) return;
 
-				if (!btn || !card)
-					return;
-
-				if (isDashboardLocked()) {
+				if (isLocked()) {
 					btn.disabled = true;
 					card.classList.add("locked-by-dashboard");
-				}
-				else {
+				} else {
 					btn.disabled = false;
 					card.classList.remove("locked-by-dashboard");
 				}
@@ -539,15 +533,85 @@
 				if (isWidgetLocked(widgetId)) {
 					btn.innerHTML = '<i class="fas fa-lock"></i>';
 					card.classList.add("widget-locked");
-				}
-				else {
+				} else {
 					btn.innerHTML = '<i class="fas fa-unlock"></i>';
 					card.classList.remove("widget-locked");
 				}
 			}
-
+			
 			// initialize drag/resize on page load
-    		initDragResize();
+    			initDragResize();
+
+			// Build logical columns and move existing cards into them so we can use sortable
+			(function buildColumnsAndInitSortable(){
+				const cols = 3; // change this to adjust number of logical columns
+				const containerRow = document.querySelector('#none_shall_pass');
+				if (!containerRow) return;
+				// create columns container
+				let dashColumns = document.getElementById('dashboard-columns');
+				if (!dashColumns) {
+					dashColumns = document.createElement('div');
+					dashColumns.className = 'row';
+					dashColumns.id = 'dashboard-columns';
+					containerRow.appendChild(dashColumns);
+				}
+
+				// create column slots
+				for (let i = 0; i < cols; i++) {
+					let col = document.createElement('div');
+					col.className = 'col-md-' + (12/cols) + ' d-block';
+					let list = document.createElement('div');
+					list.className = 'sortable-list';
+					list.setAttribute('data-col-index', i);
+					col.appendChild(list);
+					dashColumns.appendChild(col);
+				}
+
+				// Move existing cards into the logical columns
+				const cards = Array.from(document.querySelectorAll('.widget-card'));
+				cards.forEach((card, idx) => {
+					const prevParent = card.parentElement;
+					let targetCol = card.dataset.layoutColumn;
+					let colIndex = (targetCol !== undefined && targetCol !== '') ? Number(targetCol) : (idx % cols);
+					colIndex = Math.max(0, Math.min(cols-1, colIndex));
+					const list = document.querySelector('.sortable-list[data-col-index="' + colIndex + '"]');
+					if (list) list.appendChild(card);
+					// if previous parent is an empty col wrapper, remove it
+					if (prevParent && prevParent !== list && prevParent.children.length === 0) {
+						prevParent.remove();
+					}
+				});
+
+				// Initialize jQuery UI sortable on these lists
+				if (typeof $ !== 'undefined' && typeof $.fn.sortable === 'function') {
+					$('.sortable-list').sortable({
+						connectWith: '.sortable-list',
+						handle: '.card-header',
+						placeholder: 'ui-state-highlight',
+						stop: function() { saveLayout(); }
+					}).disableSelection();
+				}
+
+				function saveLayout(){
+					const payload = [];
+					document.querySelectorAll('.sortable-list').forEach(list => {
+						const colIndex = Number(list.getAttribute('data-col-index'));
+						Array.from(list.querySelectorAll('.widget-card')).forEach((card, pos) => {
+							const widgetId = card.getAttribute('data-widget-id') || card.id.replace('sortable-cards','');
+							payload.push({ widget_id: Number(widgetId), column: colIndex, order: pos });
+						});
+					});
+
+					fetch('{{ route('profile.save-widget-layout') }}', {
+						method: 'POST',
+						headers: {
+							'Content-Type': 'application/json',
+							'X-CSRF-TOKEN': '{{ csrf_token() }}'
+						},
+						body: JSON.stringify({ layout: payload })
+					}).then(r => { /* optional: handle response */ }).catch(()=>{});
+				}
+			})();
 
 			//Restore saved positions
 
@@ -558,38 +622,65 @@
 				$("#" + id).css(pos);
 			});
 
-			// set intial lock state
-			updateDashButtonUI();
-
-			//	dashLock button click toggle handler
-			dashLockBtn.addEventListener("click", function() {
-				const newState = !isDashboardLocked();
-				setDashboardLock(newState);
-				// Update all widget buttons since dashboard lock overrides all others
-				document.querySelectorAll(".widget-lock-btn").forEach(btn => {
-					const widgetId = btn.getAttribute("data-widget-id");
-					updateWidgetButtonUI(widgetId);
-				});
-				// Update dashboard button UI
-				updateDashButtonUI();
+			// initialize lock state from server values
+			// dashboard
+			const serverDashboardLocked = {{ !empty($dashboard_info['is_locked']) ? 'true' : 'false' }};
+			localStorage.setItem(storageKey, serverDashboardLocked);
+			// widgets
+			document.querySelectorAll('.widget-card').forEach(card => {
+				const widgetId = card.getAttribute('data-widget-id');
+				const serverVal = card.getAttribute('data-server-locked');
+				if (widgetId && (serverVal === '1' || serverVal === '0')) {
+					localStorage.setItem(getWidgetLockKey(widgetId), serverVal === '1' ? 'true' : 'false');
+				}
 			});
+			updateButtonUI();
 
-			// widget lock button click toggle handler
-			document.querySelectorAll(".widget-lock-btn").forEach(btn => {
-				const widgetId = btn.getAttribute("data-widget-id");
-
-				btn.addEventListener("click", function() {
-					const newState = !isWidgetLocked(widgetId);
+			// initialize widget lock buttons
+			document.querySelectorAll('.widget-lock-btn').forEach(btn => {
+				const widgetId = btn.getAttribute('data-widget-id');
+				btn.addEventListener('click', function(e) {
+					e.preventDefault();
+					const newState = ! (localStorage.getItem(getWidgetLockKey(widgetId)) === "true");
+					// update locally
 					setWidgetLock(widgetId, newState);
 					updateWidgetButtonUI(widgetId);
+					// save to server
+					fetch('{{ route('profile.save-widget-lock') }}', {
+						method: 'POST',
+						headers: {
+							'Content-Type': 'application/json',
+							'X-CSRF-TOKEN': '{{ csrf_token() }}'
+						},
+						body: JSON.stringify({ widget_id: widgetId, locked: newState })
+					}).catch(()=>{});
 				});
-
-				// Set initial UI state for widget lock buttons
+				// set initial state
 				updateWidgetButtonUI(widgetId);
 			});
-			
+
+			//	button click toggle handler
+			lockBtn.addEventListener("click", function() {
+				const newState = !isLocked();
+				localStorage.setItem(storageKey, newState);
+				// save to server
+				fetch('{{ route('profile.save-dashboard-lock') }}', {
+					method: 'POST',
+					headers: {
+						'Content-Type': 'application/json',
+						'X-CSRF-TOKEN': '{{ csrf_token() }}'
+					},
+					body: JSON.stringify({ dashboard_id: dashboardId, locked: newState })
+				}).catch(()=>{});
+				updateButtonUI();
+				// Update all widget buttons since dashboard lock overrides individual widget locks
+				document.querySelectorAll('.widget-lock-btn').forEach(btn => {
+					const widgetId = btn.getAttribute('data-widget-id');
+					updateWidgetButtonUI(widgetId);
+				});
+			});
 		});
-		</script>
+	</script>
 
 	<script>
 	// Update a Chart.js instance with new labels/datasets

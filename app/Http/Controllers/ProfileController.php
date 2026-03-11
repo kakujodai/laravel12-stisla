@@ -204,6 +204,82 @@ class ProfileController extends Controller
         ]);
     }
 
+    /**
+     * Save widget layout (column + order) for a user's dashboard widgets.
+     */
+    public function saveWidgetLayout(Request $request)
+    {
+        $request->validate([
+            'layout' => 'required|array',
+            'layout.*.widget_id' => 'required|integer|exists:dashboard_widgets,id',
+            'layout.*.column' => 'required|integer|min:0',
+            'layout.*.order' => 'required|integer|min:0',
+        ]);
+
+        $userId = auth()->id();
+
+        foreach ($request->input('layout') as $item) {
+            $widget = \App\Models\DashboardWidget::where('user_id', $userId)
+                ->where('id', $item['widget_id'])
+                ->first();
+            if (!$widget) continue; // skip widgets not owned by user
+
+            $meta = $widget->metadata ?? [];
+            if (!is_array($meta)) $meta = json_decode($widget->metadata, true) ?: [];
+            $meta['column'] = (int)$item['column'];
+            $meta['order'] = (int)$item['order'];
+
+            $widget->metadata = $meta; // DashboardWidget casts metadata to array now
+            $widget->order = (int)$item['order'];
+            $widget->layout_column = (int)$item['column'];
+            $widget->save();
+        }
+
+        return response()->json(['ok' => true]);
+    }
+
+    /**
+     * Persist a single widget lock state to DB.
+     */
+    public function saveWidgetLock(Request $request)
+    {
+        $request->validate([
+            'widget_id' => 'required|integer|exists:dashboard_widgets,id',
+            'locked' => 'required|boolean',
+        ]);
+
+        $userId = auth()->id();
+        $widget = \App\Models\DashboardWidget::where('user_id', $userId)
+            ->where('id', $request->integer('widget_id'))
+            ->first();
+        if (!$widget) return response()->json(['ok' => false], 404);
+
+        $widget->is_locked = (bool)$request->input('locked');
+        $widget->save();
+        return response()->json(['ok' => true]);
+    }
+
+    /**
+     * Persist dashboard-level lock to DB.
+     */
+    public function saveDashboardLock(Request $request)
+    {
+        $request->validate([
+            'dashboard_id' => 'required|integer|exists:dashboards,id',
+            'locked' => 'required|boolean',
+        ]);
+
+        $userId = auth()->id();
+        $dashboard = Dashboard::where('user_id', $userId)
+            ->where('id', $request->integer('dashboard_id'))
+            ->first();
+        if (!$dashboard) return response()->json(['ok' => false], 404);
+
+        $dashboard->is_locked = (bool)$request->input('locked');
+        $dashboard->save();
+        return response()->json(['ok' => true]);
+    }
+
 
     
 }
