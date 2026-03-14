@@ -7,6 +7,7 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/jqueryui/1.13.2/themes/base/jquery-ui.min.css" integrity="sha512-ELV+xyi8IhEApPS/pSj66+Jiw+sOT1Mqkzlh8ExXihe4zfqbWkxPRi8wptXIO9g73FSlhmquFlUOuMSoXz5IRw==" crossorigin="anonymous" referrerpolicy="no-referrer" />
     <link rel="stylesheet" href="https://cdn.datatables.net/1.13.8/css/jquery.dataTables.min.css">
     <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+    <link rel="stylesheet" href="/library/Leaflet.Legend-master/src/leaflet.legend.css">
 
     <style>
         .dashboard-toolbar {
@@ -106,6 +107,15 @@
             padding: 6px 6px 2px 6px;
             min-height: 44px;
             box-shadow: none;
+        }
+
+        /* Leaflet legend styles */
+        .leaflet-control.legend {
+            background: #fff;
+            padding: 6px 8px;
+            font: 12px/1.4 "Helvetica Neue", Arial, sans-serif;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.35);
+            border-radius: 4px;
         }
     </style>
 @endpush
@@ -283,6 +293,58 @@
                                     layers: [osm, {{ str_replace('-', '', pathinfo($widget['filename'], PATHINFO_FILENAME)) }}{{ $widget['random_id'] }}]
                                 });
 
+                                // Legend integration using Leaflet.Legend plugin
+                                var legendControl{{ $widget['random_id'] }} = null;
+
+                                function buildLegends{{ $widget['random_id'] }}() {
+                                    return Object.keys(overlayMaps{{ $widget['random_id'] }}).map(function (name) {
+                                        var layer = overlayMaps{{ $widget['random_id'] }}[name];
+                                        var color = '#3388ff';
+                                        try {
+                                            if (layer && layer.options && layer.options.color) color = layer.options.color;
+                                            var first = (layer && layer.getLayers && layer.getLayers()[0]) || null;
+                                            if (first && first.feature && first.feature.properties && first.feature.properties.color) {
+                                                color = first.feature.properties.color;
+                                            }
+                                        } catch (err) { }
+
+                                        var type = 'rectangle';
+                                        try {
+                                            var firstLayer = (layer && layer.getLayers && layer.getLayers()[0]) || null;
+                                            if (firstLayer && firstLayer.feature && firstLayer.feature.geometry) {
+                                                var g = firstLayer.feature.geometry.type;
+                                                if (g === 'Point' || g === 'MultiPoint') type = 'circle';
+                                                else if (g === 'LineString' || g === 'MultiLineString') type = 'polyline';
+                                                else if (g === 'Polygon' || g === 'MultiPolygon') type = 'polygon';
+                                            }
+                                        } catch(e) {}
+
+                                        return {
+                                            label: name,
+                                            type: type,
+                                            color: color,
+                                            layers: layer
+                                        };
+                                    });
+                                }
+
+                                function updateLegend{{ $widget['random_id'] }}() {
+                                    try {
+                                        if (legendControl{{ $widget['random_id'] }}) {
+                                            map{{ $widget['random_id'] }}.removeControl(legendControl{{ $widget['random_id'] }});
+                                        }
+                                    } catch (e) { }
+
+                                    legendControl{{ $widget['random_id'] }} = L.control.legend({
+                                        position: 'bottomright',
+                                        title: 'Legend',
+                                        legends: buildLegends{{ $widget['random_id'] }}(),
+                                        collapsed: false,
+                                        symbolWidth: 18,
+                                        symbolHeight: 18
+                                    }).addTo(map{{ $widget['random_id'] }});
+                                }
+
                                 const viewKey{{ $widget['random_id'] }} = 'mapview:dash{{ $dashboard_info["id"] }}:widget{{ $widget["id"] }}';
 
                                 function saveMapView{{ $widget['random_id'] }}() {
@@ -333,6 +395,7 @@
                                     });
 
                                     broadcastBBox();
+                                    updateLegend{{ $widget['random_id'] }}();
                                     mapDataLoaded{{ $widget['random_id'] }} = true;
                                 });
 
@@ -341,7 +404,11 @@
                                 });
                                 resizeObserver{{ $widget['random_id'] }}.observe(document.getElementById("{{ $widget['random_id'] }}"));
 
+                                //Add layer Control to map
                                 var layerControl = L.control.layers(baseMaps, overlayMaps{{ $widget['random_id'] }}).addTo(map{{ $widget['random_id'] }});
+
+                                // Legend is provided by Leaflet.Legend plugin and updated via updateLegend{{ $widget['random_id'] }}()
+
 
                                 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
                                     attribution: '&copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a>',
@@ -361,6 +428,7 @@
                                                 overlayMaps{{ $widget['random_id'] }}[full_name].eachLayer(function (layer) {
                                                     layer.bindPopup('<pre>'+JSON.stringify(layer.feature.properties,null,' ').replace(/[\{\}"]/g,'')+'</pre>');
                                                 });
+                                                updateLegend{{ $widget['random_id'] }}();
                                                 map{{ $widget['random_id'] }}.spin(false);
                                             } else {
                                                 console.log("Failed to get json");
@@ -705,4 +773,5 @@
 	<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom@next"></script>
 	<script src="https://cdn.datatables.net/1.13.8/js/jquery.dataTables.min.js"></script>
 	<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+    <script src="/library/Leaflet.Legend-master/src/leaflet.legend.js"></script>
 @endpush
