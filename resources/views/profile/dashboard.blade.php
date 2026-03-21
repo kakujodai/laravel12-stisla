@@ -107,6 +107,15 @@
             min-height: 44px;
             box-shadow: none;
         }
+
+        .legend {
+            background: white;
+            padding: 10px;
+            border-radius: 6px;
+            line-height: 1.4;
+            box-shadow: 0 0 6px rgba(0,0,0,0.2);
+            font-size: 13px;
+        }
     </style>
 @endpush
 
@@ -257,6 +266,81 @@
                                     });
                                 }
 
+                                const propertiesMeta{{ $widget['random_id'] }} = @json($widget['properties_metadata'] ?? []);
+                                
+                                //Legend Helper Functions
+                                function getLegendField(features, propertiesMeta) {
+                                    if (propertiesMeta?.legend?.property) {
+                                        return propertiesMeta.legend.property;
+                                    }
+
+                                    if (propertiesMeta?.x_axis && propertiesMeta.x_axis.length > 0) {
+                                            const candidate = propertiesMeta.x_axis.find(field =>
+                                                !field.toLowerCase().includes('id') &&
+                                                !field.toLowerCase().includes('object')
+                                            ); 
+                                        return candidate || propertiesMeta.x_axis[0];
+                                    }
+
+                                    const sample = features[0]?.properties || {};
+                                    const keys = Object.keys(sample);
+
+                                    for (let key of keys) {
+                                        const values = new Set();
+
+                                        for (let f of features) {
+                                            if (f.properties[key] != null) {
+                                                values.add(f.properties[key]);
+                                            }
+                                            if (values.size > 10)
+                                                break;
+                                        }
+
+                                        if (values.size > 1 && values.size <= 10) {
+                                                return key;
+                                        }
+                                    }
+
+                                    return null;
+                                }
+
+                                function buildLegend(features, propertiesMeta) {
+
+                                    const legendMap = {};
+                                    const legendField = getLegendField(features, propertiesMeta);
+
+                                    features.forEach(f => {
+                                        const color = f.properties.color || '#3388ff';
+
+                                        let label = "Unknown";
+                                        if (legendField && f.properties[legendField] !== undefined) {
+                                            label = f.properties[legendField];
+                                        }
+
+                                        if (!legendMap[color]) {
+                                            legendMap[color] = label;
+                                        }
+                                    }); 
+
+                                    return legendMap;
+                                }
+
+                                function renderLegend(legendMap) {
+                                    let html = "<b>Legend</b><br>";
+
+                                    Object.entries(legendMap).forEach(([color, label]) => {
+                                        html += `
+                                            <div style="display:flex; align-items:center; margin-bottom:4px;">
+                                                <span style="width:12px;height:12px;background:${color};display:inline-block;margin-right:6px;"></span>
+                                                ${label}
+                                            </div>
+                                        `;
+                                    });  
+
+                                    return html;
+                                }
+
+
                                 var {{ pathinfo($widget['filename'], PATHINFO_FILENAME) }}{{ $widget['random_id'] }} =
                                     new L.GeoJSON.AJAX("{{ route('profile.get-geojson', ['filename' => pathinfo($widget['filename'], PATHINFO_FILENAME)]) }}", {
                                         pointToLayer: createCircleMarker,
@@ -282,6 +366,17 @@
                                     zoom: 14,
                                     layers: [osm, {{ str_replace('-', '', pathinfo($widget['filename'], PATHINFO_FILENAME)) }}{{ $widget['random_id'] }}]
                                 });
+
+                                //Legend Control Section
+                                var legend{{ $widget['random_id'] }} = L.control({ position: 'bottomright' });
+                                
+                                legend{{ $widget['random_id'] }}.onAdd = function () {
+                                    const div = L.DomUtil.create('div', 'info legend legend-{{ $widget['random_id'] }}');
+                                    div.innerHTML = "<b>Legend</b><br>";
+                                    return div;
+                                };
+
+                                legend{{ $widget['random_id'] }}.addTo(map{{ $widget['random_id'] }});
 
                                 const viewKey{{ $widget['random_id'] }} = 'mapview:dash{{ $dashboard_info["id"] }}:widget{{ $widget["id"] }}';
 
@@ -331,6 +426,26 @@
                                     {{ pathinfo($widget['filename'], PATHINFO_FILENAME) }}{{ $widget['random_id'] }}.eachLayer(function (layer) {
                                         layer.bindPopup('<pre>'+JSON.stringify(layer.feature.properties,null,' ').replace(/[\{\}"]/g,'')+'</pre>');
                                     });
+
+                                    //Legend building
+                                    const features = [];
+
+                                    {{ pathinfo($widget['filename'], PATHINFO_FILENAME); }}{{ $widget['random_id'] }}
+                                        .eachLayer(function (layer) {
+                                            if (layer.feature) {
+                                                features.push(layer.feature);
+                                            }
+                                    });
+
+                                    const legendData = buildLegend(
+                                        features,
+                                        propertiesMeta{{ $widget['random_id'] }}
+                                    );
+
+                                    const legendHtml = renderLegend(legendData);
+
+                                    // Target this map's legend specifically
+                                    document.querySelector(".legend-{{ $widget['random_id'] }}").innerHTML = legendHtml;
 
                                     broadcastBBox();
                                     mapDataLoaded{{ $widget['random_id'] }} = true;
