@@ -108,6 +108,7 @@
             box-shadow: none;
         }
 
+        /* Legend Styles */
         .legend {
             background: white;
             padding: 10px;
@@ -115,6 +116,23 @@
             line-height: 1.4;
             box-shadow: 0 0 6px rgba(0,0,0,0.2);
             font-size: 13px;
+        }
+
+        /* Tooltip Styles*/
+        .map-tooltip {
+            font-size: 12px;
+            line-height: 1.4;
+        }
+
+        .map-tooltip div {
+            margin-bottom: 2px;
+        }
+
+        .leaflet-tooltip {
+            background: rgba(255,255,255,0.95);
+            border: 1px solid #ccc;
+            border-radius: 6px;
+            padding: 6px 8px;
         }
     </style>
 @endpush
@@ -176,6 +194,47 @@
                     clearTimeout(t);
                     t = setTimeout(() => fn(...args), ms);
                 };
+            }
+
+            //Format Tooltip for Leaflet Maps
+            function formatTooltipContent(properties, config = {}) {
+                if (!properties)
+                    return "No data";
+
+                const keys = Object.keys(properties);
+
+                const fields = config.fields && config.fields.length ? config.fields : keys.slice(0, 5);
+
+                return `
+                    <div class="map-tooltip">
+                        ${fields.map(key => `
+                        <div><strong>${key}:</strong> ${properties[key]}</div>
+                        `).join('')}
+                    </div>
+                `;
+            }
+
+            function getSmartFields(properties) {
+                const priority = ['name', 'title', 'id', 'type', 'category'];
+                const keys = Object.keys(properties);
+
+                const selected = priority.filter(p => keys.includes(p));
+                return selected.length ? selected : keys.slice(0, 4);
+            }
+
+            function attachFeatureInteractions(layer, props, config = {}) {
+                layer.bindTooltip(
+                    formatTooltipContent(props, config),
+                    { sticky: true, direction: 'top' }
+                );
+
+                layer.bindPopup(`
+                    <div class="map-popup">
+                        ${Object.entries(props).map(([k,v]) =>
+                        `<div><strong>${k}:</strong> ${v}</div>`
+                        ).join('')}
+                    </div>
+                `);
             }
         </script>
 
@@ -355,8 +414,12 @@
                                             };
                                         },
                                         onEachFeature: function (feature, layer) {
-                                            layer.bindPopup('<pre>' + JSON.stringify(feature.properties, null, ' ').replace(/[\{\}"]/g, '') + '</pre>');
-                                        },
+                                            const props = feature.properties || {};
+
+                                            attachFeatureInteractions(layer, props, {
+                                                fields: getSmartFields(props)
+                                            });
+                                        }
                                     });
 
                                 overlayMaps{{ $widget['random_id'] }}.{{ pathinfo($widget['filename'], PATHINFO_FILENAME) }} = {{ pathinfo($widget['filename'], PATHINFO_FILENAME) }}{{ $widget['random_id'] }};
@@ -424,7 +487,11 @@
                                     }
 
                                     {{ pathinfo($widget['filename'], PATHINFO_FILENAME) }}{{ $widget['random_id'] }}.eachLayer(function (layer) {
-                                        layer.bindPopup('<pre>'+JSON.stringify(layer.feature.properties,null,' ').replace(/[\{\}"]/g,'')+'</pre>');
+                                        if (!layer.feature)
+                                            return;
+                                        attachFeatureInteractions(layer, layer.feature.properties, {
+                                            fields: getSmartFields(layer.feature.properties)
+                                        });
                                     });
 
                                     //Legend building
@@ -474,7 +541,12 @@
                                             if (data) {
                                                 overlayMaps{{ $widget['random_id'] }}[full_name].addData(data);
                                                 overlayMaps{{ $widget['random_id'] }}[full_name].eachLayer(function (layer) {
-                                                    layer.bindPopup('<pre>'+JSON.stringify(layer.feature.properties,null,' ').replace(/[\{\}"]/g,'')+'</pre>');
+                                                    if (!layer.feature)
+                                                        return;
+
+                                                    attachFeatureInteractions(layer, layer.feature.properties, {
+                                                        fields: getSmartFields(layer.feature.properties)
+                                                    });
                                                 });
                                                 map{{ $widget['random_id'] }}.spin(false);
                                             } else {
