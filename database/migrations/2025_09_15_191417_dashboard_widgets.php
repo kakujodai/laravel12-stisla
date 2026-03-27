@@ -32,6 +32,7 @@ return new class extends Migration
      * widgetData[] stores misc widget data
      *      - widgetData['mapColorRules'][rule#] => $rule
      *      - widgetData['colorGradients'][$gradientID] => [] of hex codes
+     *      - doesn't do anything quite yet
      */
 
     /**
