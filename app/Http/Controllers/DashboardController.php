@@ -19,11 +19,16 @@ class DashboardController extends Controller
         ob_start('ob_gzhandler');
         $userId = Auth::id();
 
-        $my_files = FileUpload::select('filename')->where('user_id', $userId)->get();
+        $my_files = FileUpload::select('filename')
+            ->where('user_id', $userId)
+            ->get();
+
         $geojson_array = [];
         foreach ($my_files as $my_file) {
             $file = $my_file['filename'];
-            $geojson_array[] = ['filename' => preg_replace('/[^A-Za-z0-9\_\.]/', '', basename($file))];
+            $geojson_array[] = [
+                'filename' => preg_replace('/[^A-Za-z0-9\_\.]/', '', basename($file))
+            ];
         }
 
         $dashboard_info = Dashboard::where('user_id', $userId)
@@ -33,15 +38,14 @@ class DashboardController extends Controller
         $get_widgets = DashboardWidget::where('dashboard_id', $id)->get();
 
         foreach ($get_widgets as $get_widget) {
-            $chart = [];
-            $values = [];
-            $values_md = [];
             $labels = [];
+            $values = [];
 
             $decode_metadata = json_decode($get_widget['metadata'], true) ?: [];
             $get_widget['layout'] = $decode_metadata['layout'] ?? [];
             $get_map_filename = $decode_metadata['map_filename'] ?? null;
 
+            //map widgets
             if ($get_widget['widget_type_id'] == 1) {
                 $get_widget['random_id'] = $get_widget['id'];
                 $get_widget['filename'] = null;
@@ -52,26 +56,26 @@ class DashboardController extends Controller
                     $get_widget['filename'] = preg_replace('/[^A-Za-z0-9\_\.]/', '', basename($get_map_filename));
                 }
 
-                if (array_key_exists('importColors', $decode_metadata) && $decode_metadata['importColors']) {
-                    $get_widget['importColor'] = true;
-                } else {
-                    $get_widget['importColor'] = false;
-                }
+                $get_widget['importColor'] = !empty($decode_metadata['importColors']);
             }
-            elseif ($get_widget['widget_type_id'] == 5) { // TABLE
+
+            //table widgets
+            elseif ($get_widget['widget_type_id'] == 5) {
                 $geojson = FileUpload::select('geojson')
-                    ->where('user_id', '=', Auth::id())
-                    ->where('filename', '=', $get_map_filename)
+                    ->where('user_id', $userId)
+                    ->where('filename', $get_map_filename)
                     ->value('geojson');
 
                 $json_version = json_decode($geojson, true);
 
-                if (!is_array($json_version) || ($json_version['type'] ?? '') !== 'FeatureCollection') {
-                    $get_widget['random_id'] = Str::random();
-                    $get_widget['table'] = [];
-                    $get_widget['table_headings'] = [];
-                    $get_widget['visible_columns'] = [];
-                } else {
+                // defaults
+                $get_widget['random_id'] = Str::random();
+                $get_widget['table'] = [];
+                $get_widget['table_headings'] = [];
+                $get_widget['visible_columns'] = [];
+                $get_widget['table_map_link_id'] = $decode_metadata['tableMapLinkID'] ?? 'noLink321π';
+
+                if (is_array($json_version) && ($json_version['type'] ?? '') === 'FeatureCollection') {
                     $picked = $decode_metadata['table_columns'] ?? [];
                     $table_keys = array_values(array_filter($picked, fn($k) => is_string($k) && $k !== ''));
 
@@ -80,22 +84,25 @@ class DashboardController extends Controller
                     }
 
                     $value_md = [];
-                    foreach ($json_version['features'] as $feature) {
+                    foreach (($json_version['features'] ?? []) as $feature) {
                         $props = $feature['properties'] ?? [];
                         $row = [];
+
                         foreach ($table_keys as $k) {
                             $row[] = array_key_exists($k, $props) ? $props[$k] : '';
                         }
+
                         $value_md[] = $row;
                     }
 
-                    $get_widget['random_id'] = Str::random();
                     $get_widget['table'] = $value_md;
                     $get_widget['table_headings'] = $table_keys;
                     $get_widget['visible_columns'] = $decode_metadata['visible_columns'] ?? $table_keys;
                 }
             }
-            elseif ($get_widget['widget_type_id'] > 1 && $get_widget['widget_type_id'] <= 4) { // CHARTS
+
+            //chart widgets
+            elseif ($get_widget['widget_type_id'] > 1 && $get_widget['widget_type_id'] <= 4) {
                 $get_widget['chart'] = null;
                 $get_widget['map_link_id'] = $decode_metadata['mapLinkID'] ?? 'noLink321π';
                 $get_widget['category_warning'] = false;
@@ -114,24 +121,23 @@ class DashboardController extends Controller
 
                     if ($decode_metadata['norm'] == 'NOPE') {
                         $results = $this->calculateChartData(
-                            $decode_metadata['x_axis'],
-                            $decode_metadata['y_axis'],
+                            $decode_metadata['x_axis'] ?? null,
+                            $decode_metadata['y_axis'] ?? null,
                             $features,
                             $get_widget['widget_type_id']
                         );
                     } else {
                         $results = $this->compressDatasets(
-                            $decode_metadata['norm_axis'],
-                            $decode_metadata['norm_calc'],
+                            $decode_metadata['norm_axis'] ?? [],
+                            $decode_metadata['norm_calc'] ?? 'summation',
                             $features,
                             0
                         );
                     }
 
-                    $labels = $results['labels'];
-                    $values = $results['values'];
-                    $categoryWarning = $results['catWarning'];
-                    unset($results);
+                    $labels = $results['labels'] ?? [];
+                    $values = $results['values'] ?? [];
+                    $categoryWarning = $results['catWarning'] ?? false;
 
                     $chart_types    = [2 => 'line', 3 => 'bar', 4 => 'pie', 5 => 'table'];
                     $label_location = ($get_widget['widget_type_id'] == 4) ? 'right' : 'top';
@@ -165,11 +171,12 @@ class DashboardController extends Controller
         }
 
         $get_widget_types = DashboardWidgetType::get();
+
         $array = [
             'dashboard_info' => $dashboard_info[0],
             'widgets'        => $get_widgets,
             'widget_types'   => $get_widget_types,
-            'all_geojsons'   => $geojson_array
+            'all_geojsons'   => $geojson_array,
         ];
 
         return view('profile.dashboard', $array);
@@ -393,10 +400,11 @@ class DashboardController extends Controller
 
         if ((int)$request->widget_type === 5) {
             $request->validate([
-                'table_columns'   => ['required', 'array', 'min:1'],
-                'table_columns.*' => ['string'],
+                'table_columns'      => ['required', 'array', 'min:1'],
+                'table_columns.*'    => ['string'],
+                'table_map_link_id'  => ['nullable', 'string'],
             ]);
-        } 
+        }
         elseif ((int)$request->widget_type !== 1) {
             $request->validate([
                 'mapLinkID' => ['required', 'string'],
@@ -446,10 +454,13 @@ class DashboardController extends Controller
             $metadata = ['map_filename' => $request->map_filename];
         } elseif ((int)$request->widget_type === 5) {
             $metadata = [
-                'map_filename'  => $request->map_filename,
-                'table_columns' => $request->input('table_columns', []),
+                'map_filename'   => $request->map_filename,
+                'table_columns'  => $request->input('table_columns', []),
+                'tableMapLinkID' => $request->boolean('enableTableMapLink')
+                    ? ($request->input('table_map_link_id') ?: 'noLink321π')
+                    : 'noLink321π',
             ];
-        } else if ($request->norm_control == "YEAH") {
+            }else if ($request->norm_control == "YEAH") {
             $metadata = [
                 'map_filename'  => $request->map_filename,
                 'mapLinkID'     => $request->mapLinkID ?: 'noLink321π',

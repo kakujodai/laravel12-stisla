@@ -282,6 +282,11 @@
                                     zoom: 14,
                                     layers: [osm, {{ str_replace('-', '', pathinfo($widget['filename'], PATHINFO_FILENAME)) }}{{ $widget['random_id'] }}]
                                 });
+                                window.LinkedMaps = window.LinkedMaps || {};
+                                window.LinkedMaps['{{ $widget['id'] }}'] = {
+                                    map: map{{ $widget['random_id'] }},
+                                    layer: {{ pathinfo($widget['filename'], PATHINFO_FILENAME) }}{{ $widget['random_id'] }}
+                                };
 
                                 const viewKey{{ $widget['random_id'] }} = 'mapview:dash{{ $dashboard_info["id"] }}:widget{{ $widget["id"] }}';
 
@@ -464,6 +469,13 @@
                                     document.addEventListener("DOMContentLoaded", function() {
                                         const tableEl = $("#table-{{ $widget['random_id'] }}");
                                         const table = tableEl.DataTable();
+                                        const linkedMapId = @json($widget['table_map_link_id'] ?? 'noLink321π');
+                                        table.on('search.dt', function () {
+                                            if (!linkedMapId || linkedMapId === 'noLink321π') return;
+
+                                            const searchText = table.search();
+                                            applyTableSearchToLinkedMap(linkedMapId, searchText);
+                                        });
                                         const select = $("#colSelect-{{ $widget['random_id'] }}");
                                         const headers = tableEl.find('thead th').map(function(){ return $(this).text().trim(); }).get();
 
@@ -695,6 +707,52 @@
 			}
 		});
 	</script>
+    <script> //table map linking
+        window.LinkedMaps = window.LinkedMaps || {};
+
+        function featureMatchesSearch(feature, searchText) {
+            if (!searchText) return true;
+
+            const needle = String(searchText).toLowerCase().trim();
+            const props = feature.properties || {};
+
+            return Object.values(props).some(val =>
+                String(val ?? '').toLowerCase().includes(needle)
+            );
+        }
+
+        function applyTableSearchToLinkedMap(mapWidgetId, searchText) {
+            const entry = window.LinkedMaps[mapWidgetId];
+            if (!entry || !entry.layer) return;
+
+            entry.layer.eachLayer(function(layer) {
+                const feature = layer.feature || {};
+                const match = featureMatchesSearch(feature, searchText);
+
+                if (match) {
+                    if (layer.setStyle) {
+                        layer.setStyle({
+                            opacity: 1,
+                            fillOpacity: 0.8
+                        });
+                    }
+                    if (layer.getElement && layer.getElement()) {
+                        layer.getElement().style.display = '';
+                    }
+                } else {
+                    if (layer.setStyle) {
+                        layer.setStyle({
+                            opacity: 0,
+                            fillOpacity: 0
+                        });
+                    }
+                    if (layer.getElement && layer.getElement()) {
+                        layer.getElement().style.display = 'none';
+                    }
+                }
+            });
+        }
+    </script>
 @endsection
 
 @push('scripts')
