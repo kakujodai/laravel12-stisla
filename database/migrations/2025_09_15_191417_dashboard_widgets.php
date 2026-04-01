@@ -33,6 +33,12 @@ return new class extends Migration
      *      - widgetData['mapColorRules'][rule#] => $rule
      *      - widgetData['colorGradients'][$gradientID] => [] of hex codes
      *      - doesn't do anything quite yet
+     * graphSettings[$setting] - customization for graphs
+     *      - line graphs only:
+     *          - lineColor: color of the line 
+     *          - shadingColor: color of the shading
+     *          - toShade: whether or not to shade
+     *          - pointSize: Size of points, default of 0
      */
 
     /**

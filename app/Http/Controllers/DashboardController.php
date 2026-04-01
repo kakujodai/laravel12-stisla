@@ -148,14 +148,6 @@ class DashboardController extends Controller
                         ->type($chart_types[$get_widget['widget_type_id']])
                         ->size(['width' => 400, 'height' => 200])
                         ->labels($labels)
-                        ->datasets([[
-                            "label" => $decode_metadata['x_axis'] ?? '',
-                            "data" => $values,
-                            "fill" => true,
-                            "pointRadius" => 0,
-                            "borderWidth" => 1,
-                            "backgroundColor" => $colorMap,
-                        ]])
                         ->options([
                             "interaction" => ["mode" => "nearest", "intersect" => false],
                             "hover" => ["mode" => "nearest", "intersect" => false],
@@ -163,6 +155,29 @@ class DashboardController extends Controller
                             "responsive" => true,
                             "maintainAspectRatio" => false,
                         ]);
+                    // custom settings for line graphs
+                    if($get_widget['widget_type_id'] === 2){
+                        $chart->datasets([[
+                            "label" => $decode_metadata['x_axis'] ?? '',
+                            "data" => $values,
+                            "fill" => $decode_metadata['graphSettings']['toShade'] ?? true,
+                            "pointRadius" => $decode_metadata['graphSettings']['pointRadius'] ?? 0,
+                            "pointBorderColor" => $colorMap,
+                            "borderWidth" => 1,
+                            "backgroundColor" => ($decode_metadata['graphSettings']['shadeColor'].'80' ?? '#36a2eb80'),
+                            "borderColor" => $decode_metadata['graphSettings']['lineColor'] ?? '#36a2eb'
+                        ]]);
+                    }
+                    else{
+                        $chart->datasets([[
+                            "label" => $decode_metadata['x_axis'] ?? '',
+                            "data" => $values,
+                            "fill" => true,
+                            "pointRadius" => 0,
+                            "borderWidth" => 1,
+                            "backgroundColor" => $colorMap,
+                        ]]);
+                    }
 
                     $get_widget['chart'] = $chart;
                     $get_widget['category_warning'] = $categoryWarning;
@@ -478,6 +493,14 @@ class DashboardController extends Controller
             ];
         }
 
+        // Line graphs are formatted differently.
+        if((int)$request->widget_type === 2){
+            $metadata['graphSettings']['lineColor'] = '#36a2eb';
+            $metadata['graphSettings']['shadeColor'] = '#36a2eb';
+            $metadata['graphSettings']['pointSize'] = 0;
+            $metadata['graphSettings']['toShade'] = true;
+        }
+
         $widget->metadata = json_encode($metadata);
         $widget->save();
 
@@ -643,16 +666,33 @@ class DashboardController extends Controller
         $categoryWarning = $results['catWarning'];
         unset($results);// I dunno, feels nice
 
-        return response()->json([
-            'labels' => $labels,
-            'datasets' => [[
+        $datasets = [];
+        if((int)$widget->widget_type_id === 2){
+            $datasets = [[
+                "label" => $xAxis ?? '',
+                "data" => $values,
+                "fill" => $meta['graphSettings']['toShade'] ?? true,
+                "pointRadius" => $meta['graphSettings']['pointSize'] ?? 0,
+                "pointBorderColor" => $this->getColorArray($widget['id'], $labels) ?? '#36a2eb',
+                "borderWidth" => 1,
+                "backgroundColor" => ($meta['graphSettings']['shadeColor'].'80' ?? '#36a2eb80'),
+                "borderColor" => $meta['graphSettings']['lineColor'] ?? '#36a2eb',
+            ]];
+        }
+        else {
+            $datasets = [[
                 'label' => $labels,
                 'data'  => $values,
                 'fill'  => true,
                 'pointRadius' => 0,
                 'borderWidth' => 1,
                 'backgroundColor' => $this->getColorArray($widget['id'], $labels),
-            ]],
+            ]];
+        }
+
+        return response()->json([
+            'labels' => $labels,
+            'datasets' => $datasets,
             'category_warning' => $categoryWarning,
         ]);
 
@@ -696,16 +736,20 @@ class DashboardController extends Controller
         if(!array_key_exists('colorMap', $metadata)){
             $metadata['colorMap'] = array();
             if(is_array($labels)){
-                // default colors from chartjs
-                $defaultColors = [
-                    '#36a2eb', // blue
-                    '#ff6384', // red
-                    '#ff9f40', // orange
-                    '#ffcd56', // yellow
-                    '#4bc0c0', // green
-                    '#422163', // purple omage
-                    '#c9cbcf' // grey
-                ];
+                    // default color for line graph is just the blue
+                if($widgetFile->widget_type_id == 2){
+                    $defaultColors = ['#36a2eb'];
+                }
+                else // default colors from chartjs
+                    $defaultColors = [
+                        '#36a2eb', // blue
+                        '#ff6384', // red
+                        '#ff9f40', // orange
+                        '#ffcd56', // yellow
+                        '#4bc0c0', // green
+                        '#422163', // purple omage
+                        '#c9cbcf' // grey
+                    ];
                 foreach($labels as $key)//give all the labels a 'default' color
                     $metadata['colorMap'][$key] = $defaultColors[sizeof($metadata['colorMap']) % sizeof($defaultColors)];
             
