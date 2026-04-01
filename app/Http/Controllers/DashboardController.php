@@ -212,7 +212,6 @@ class DashboardController extends Controller
         */
         $newDataset = array();
 
-        $finalAns = 0;
         if($calculation == "average")
             foreach($inputs as $key){
                 // for each of the collumns
@@ -231,7 +230,7 @@ class DashboardController extends Controller
                 $sum = 0;
                 foreach($dataset as $tuple){
                     $val = $tuple['properties'][$key] ?? null;
-                    if($val === null) continue;
+                    if($val === null || !is_numeric($val)) continue;
                     $sum+=$val;
                 }
                 $newDataset[$key] = $sum;
@@ -248,22 +247,22 @@ class DashboardController extends Controller
             }
         else if ($calculation == "min")
             foreach($inputs as $key){
-                $min = 99999999; // f it, just as long as something is smaller...
+                $min = Null; // f it, just as long as something is smaller...
                 foreach($dataset as $tuple){
                     $val = $tuple['properties'][$key] ?? null;
-                    if($val === null) continue;
-                    if($val < $min)
+                    if(is_null($val)) continue;
+                    if($val < $min || is_null($min))
                         $min = $val;
                 }
                 $newDataset[$key] = $min;
             }
         else if ($calculation == "max")
             foreach($inputs as $key){
-                $max = -99999999; // f it, just as long as something is larger...
+                $max = Null;
                 foreach($dataset as $tuple){
                     $val = $tuple['properties'][$key] ?? null;
-                    if($val === null) continue;
-                    if($val > $max)
+                    if(is_null($val)) continue;
+                    if($val > $max || is_null($max))
                         $max = $val;
                 }
                 $newDataset[$key] = $max;
