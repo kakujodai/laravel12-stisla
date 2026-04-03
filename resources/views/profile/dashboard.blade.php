@@ -577,8 +577,8 @@
 												select.on('change', function(){
 													const selected = $(this).val() || [];
 													applyVisibilityFromSelected(selected);
-													try { localStorage.setItem(storeKey, JSON.stringify(selected)); } catch(e){}
-													// Persist server-side
+                                            try { localStorage.setItem(storeKey, JSON.stringify(selected)); } catch(e) {}
+
 													fetch('{{ route('profile.save-widget-columns') }}', {
 														method: 'POST',
 														headers: {
