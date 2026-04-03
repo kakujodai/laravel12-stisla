@@ -155,34 +155,17 @@ class DashboardController extends Controller
                             "responsive" => true,
                             "maintainAspectRatio" => false,
                         ]);
-                    // custom settings for line graphs
-                    if($get_widget['widget_type_id'] === 2){
-                        $chart->datasets([[
-                            "label" => $decode_metadata['x_axis'] ?? '',
-                            "data" => $values,
-                            "fill" => $decode_metadata['graphSettings']['toShade'] ?? true,
-                            "pointRadius" => $decode_metadata['graphSettings']['pointRadius'] ?? 0,
-                            "pointBorderColor" => $colorMap,
-                            "borderWidth" => 1,
-                            "backgroundColor" => ($decode_metadata['graphSettings']['shadeColor'].'80' ?? '#36a2eb80'),
-                            "borderColor" => $decode_metadata['graphSettings']['lineColor'] ?? '#36a2eb'
-                        ]]);
-                    }
-                    else{
-                        $chart->datasets([[
-                            "label" => $decode_metadata['x_axis'] ?? '',
-                            "data" => $values,
-                            "fill" => true,
-                            "pointRadius" => 0,
-                            "borderWidth" => 1,
-                            "backgroundColor" => $colorMap,
-                        ]]);
-                    }
 
-                    $get_widget['chart'] = $chart;
-                    $get_widget['category_warning'] = $categoryWarning;
+                    $get_widget['chart']        = $chart;
+                    $get_widget['map_link_id']  = $decode_metadata['mapLinkID'] ?? 'noLink321π'; // <-- expose to Blade
+                    $get_widget['category_warning'] = $categoryWarning; // optional: attach flag if you ever want to expose it in Blade
                 }
             }
+            elseif ($get_widget['widget_type_id'] == 6) {
+                $get_widget['table_headings'] = [];
+                $get_widget['table'] = [];
+            }
+
         }
 
         $get_widget_types = DashboardWidgetType::get();
@@ -199,7 +182,6 @@ class DashboardController extends Controller
     private function compressDatasets($inputs, $calculation, $dataset, $toJSON){
         if(!is_array($inputs) || !is_array($dataset) || !is_string($calculation))
             return ($returnArr = ['us' => 'fucked']);
-
         /*
             $inputs is an array of 'y-axis' or of values to compress
             $calculation is what operation we want to use to compress the dataset

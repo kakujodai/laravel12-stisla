@@ -20,6 +20,7 @@ class DatabaseSeeder extends Seeder
             ['name' => 'Bar Chart',],
             ['name' => 'Pie Chart',],
             ['name' => 'Table',],
+            ['name' => 'Whiteboard'],
         ];
         DashboardWidgetType::insert($records);
     }

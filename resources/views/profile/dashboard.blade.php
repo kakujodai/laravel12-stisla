@@ -170,6 +170,42 @@
             }
         </script>
 
+            @foreach ($widgets as $widget)
+                @if ($widget['widget_type_id'] == 1) <!-- I'm the map, i'm the map (he's the map, he's the map) I'M THE MAP!-->
+				<div class="col-md-4">
+                    <div id="sortable-cards{{ $widget['id'] }}" class="card">
+                        <x-widget-header 
+   							:name="$widget['name']" 
+						    :widget-id="$widget['id']" 
+						    :dashboard-id="$dashboard_info['id']" 
+							:random-id="$widget['random_id']"
+							:widget-type-id="$widget['widget_type_id']" 
+							:has-settings="true"
+						/>
+                        <div class="card-body" style="height:400px;">
+			    			<div class="no-sort" id="{{ $widget['random_id'] }}" style="height:100%;"></div>
+							<script>
+								const overlayMaps{{ $widget['random_id'] }} = {};
+								// Generate all geojson overlays
+								@foreach ($all_geojsons as $each_geojson)
+									var {{ pathinfo($each_geojson['filename'], PATHINFO_FILENAME); }}{{ $widget['random_id'] }}= L.geoJson.ajax();
+									overlayMaps{{ $widget['random_id'] }}.{{ pathinfo($each_geojson['filename'], PATHINFO_FILENAME); }} = {{ pathinfo($each_geojson['filename'], PATHINFO_FILENAME); }}{{ $widget['random_id'] }};
+								@endforeach
+								// Setup the map layers we want to use
+								var osm = L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+									maxZoom: 19,
+									attribution: '© OpenStreetMap'
+								});
+								var osmH = L.tileLayer('https://{s}.tile.openstreetmap.fr/hot/{z}/{x}/{y}.png', {
+									maxZoom: 19,
+									attribution: '© OpenStreetMap contributors, Tiles style by Humanitarian OpenStreetMap Team hosted by OpenStreetMap France'
+								});
+								var osmT = L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', {
+									maxZoom: 19,
+									attribution: 'Map data: © OpenStreetMap contributors, SRTM | Map style: © OpenTopoMap (CC-BY-SA)'
+								});
+								var osmwmsLayer = L.tileLayer.wms('http://ows.mundialis.de/services/service?', { layers: 'OSM-WMS' });
+								var topowmsLayer = L.tileLayer.wms('http://ows.mundialis.de/services/service?', { layers: 'TOPO-WMS' });
         @foreach ($widgets as $index => $widget)
             @php
                 $layout = $widget['layout'] ?? [];
@@ -409,6 +445,26 @@
 							</div>
 						</div>
 
+					<!--here there be drawing-->
+					@elseif ($widget['widget_type_id']  == 6)
+						<div id="whiteboard" class="card">
+									<div class="card-header flex-header">
+									{{$widget['name']}}
+									<form action="{{ route('profile.delete-widget', ['id' => $widget['id'], 'dash_id' => $dashboard_info['id']]) }}" method="POST" style="display: inline-block;">
+										@csrf
+										<button type="submit" class="btn btn-secondary rounded-sm fas fa-trash"></button>
+									</form>
+								</div>
+								<div class ="card-body">
+									<div class="no-sort">
+										<div id="excal" ></div>
+										@viteReactRefresh
+										@vite('resources/js/app.jsx')
+									</div>
+								</div>
+								
+								
+						</div>
             @else
                 <div
                     id="widget-{{ $widget['id'] }}"
@@ -518,29 +574,30 @@
                                             }
                                         } catch(e) {}
 
-                                        select.on('change', function() {
-                                            const selected = $(this).val() || [];
-                                            applyVisibilityFromSelected(selected);
-                                            try { localStorage.setItem(storeKey, JSON.stringify(selected)); } catch(e) {}
-
-                                            fetch('{{ route('profile.save-widget-columns') }}', {
-                                                method: 'POST',
-                                                headers: {
-                                                    'Content-Type': 'application/json',
-                                                    'X-CSRF-TOKEN': '{{ csrf_token() }}'
-                                                },
-                                                body: JSON.stringify({ widget_id: {{ $widget['id'] }}, columns: selected })
-                                            }).then(r => {}).catch(() => {});
-                                        });
-                                    });
-                                </script>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            @endif
-        @endforeach
-    </div>
+												select.on('change', function(){
+													const selected = $(this).val() || [];
+													applyVisibilityFromSelected(selected);
+													try { localStorage.setItem(storeKey, JSON.stringify(selected)); } catch(e){}
+													// Persist server-side
+													fetch('{{ route('profile.save-widget-columns') }}', {
+														method: 'POST',
+														headers: {
+															'Content-Type': 'application/json',
+															'X-CSRF-TOKEN': '{{ csrf_token() }}'
+														},
+														body: JSON.stringify({ widget_id: {{ $widget['id'] }}, columns: selected })
+													}).then(r => { /* optional: check resp */ }).catch(()=>{});
+												});
+											});
+										</script>
+									</div>
+								</div>
+							</div>
+						</div>	
+            	@endif
+            @endforeach
+		</div>
+	</div>
 
     <script>
 		document.addEventListener("DOMContentLoaded", function () {
