@@ -148,6 +148,14 @@ class DashboardController extends Controller
                         ->type($chart_types[$get_widget['widget_type_id']])
                         ->size(['width' => 400, 'height' => 200])
                         ->labels($labels)
+                        ->datasets([[
+                            "label" => $decode_metadata['x_axis'] ?? '',
+                            "data" => $values,
+                            "fill" => true,
+                            "pointRadius" => 0,
+                            "borderWidth" => 1,
+                            "backgroundColor" => $colorMap,
+                        ]])
                         ->options([
                             "interaction" => ["mode" => "nearest", "intersect" => false],
                             "hover" => ["mode" => "nearest", "intersect" => false],
@@ -475,6 +483,14 @@ class DashboardController extends Controller
             ];
         }
 
+        // Line graphs are formatted differently.
+        if((int)$request->widget_type === 2){
+            $metadata['graphSettings']['lineColor'] = '#36a2eb';
+            $metadata['graphSettings']['shadeColor'] = '#36a2eb';
+            $metadata['graphSettings']['pointSize'] = 0;
+            $metadata['graphSettings']['toShade'] = true;
+        }
+        
         // Line graphs are formatted differently.
         if((int)$request->widget_type === 2){
             $metadata['graphSettings']['lineColor'] = '#36a2eb';
