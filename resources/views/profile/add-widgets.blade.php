@@ -55,6 +55,18 @@
                                 @endforeach
                             </select>
 
+                            <div id="map_forms" class="form-group" style="display:none;">
+                                <div class="form-check mb-2">
+                                    <input class="form-check-input" type="checkbox" id="importColors" name="importColors" value="importColors">
+                                    <label class="form-check-label" for="importColors">Use GeoJSON color property for map colors</label>
+                                </div>
+
+                                <label for="legend_property">Select the property to use for legend labels</label>
+                                <select class="form-control mb-2" id="legend_property" name="legend_property">
+                                    <option value="">-- auto detect --</option>
+                                </select>
+                            </div>
+
                             {{-- Chart controls --}}
                             <div id="chart_forms" class="form-group" style="display:none;">
                                 <label for="norm_control">Select whether or not to normalize multiple values.</label>
@@ -154,6 +166,24 @@
             });
         }
 
+        function update_legend_select(filename) {
+            $.post('/profile/get-file-metadata', { filename }).done(function (response) {
+                const $sel = $('#legend_property');
+                const current = $sel.val() || '';
+
+                $sel.empty();
+                $sel.append('<option value="">-- auto detect --</option>');
+
+                $.each(response.table_columns || [], function(_, value) {
+                    $sel.append(`<option value="${value}">${value}</option>`);
+                });
+
+                if ($sel.find(`option[value="${current}"]`).length) {
+                    $sel.val(current);
+                }
+            });
+        }
+
         function update_normalization_select(filename){
             const $sel = $('#norm_form1');
             update_axis_select(filename);
@@ -175,13 +205,17 @@
         $('#widget_type').on('change', function () {
             const t = $(this).val();
             if (t == 1) { // map
+                $("#map_forms").show('slow');
                 $("#chart_forms").hide('slow');
                 $("#table_column").hide('slow');
+                update_legend_select($('#map_filename').val());
             } else if (t == 5) { // table
+                $("#map_forms").hide('slow');
                 $("#chart_forms").hide('slow');
                 $("#table_column").show('slow');
                 update_table_select($('#map_filename').val());
             } else { // charts
+                $("#map_forms").hide('slow');
                 $("#table_column").hide('slow');
                 $("#chart_forms").show('slow');
                 $("#norm_form").hide('slow');
@@ -195,6 +229,7 @@
             update_axis_select(file);
             update_table_select(file);
             update_normalization_select(file);
+            update_legend_select(file);
         });
 
         $('#norm_control').on('change', function () {

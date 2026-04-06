@@ -57,6 +57,13 @@ class DashboardController extends Controller
                 } else {
                     $get_widget['importColor'] = false;
                 }
+
+                $get_widget['properties_metadata'] = [
+                    'importColor' => $get_widget['importColor'],
+                    'legend' => [
+                        'property' => $decode_metadata['legend_property'] ?? null,
+                    ],
+                ];
             }
             elseif ($get_widget['widget_type_id'] == 5) { // TABLE
                 $geojson = FileUpload::select('geojson')
@@ -443,7 +450,11 @@ class DashboardController extends Controller
         $widget->widget_type_id = (int)$request->widget_type;
 
         if ((int)$request->widget_type === 1) {
-            $metadata = ['map_filename' => $request->map_filename];
+            $metadata = [
+                'map_filename' => $request->map_filename,
+                'importColors' => $request->has('importColors'),
+                'legend_property' => $request->input('legend_property') ?: null,
+            ];
         } elseif ((int)$request->widget_type === 5) {
             $metadata = [
                 'map_filename'  => $request->map_filename,

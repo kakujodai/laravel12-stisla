@@ -315,8 +315,21 @@
                                     "Open Street Map TOPO-WMS": topowmsLayer,
                                 };
 
+                                const propertiesMeta{{ $widget['random_id'] }} = @json($widget['properties_metadata'] ?? []);
+                                const defaultLegendPalette{{ $widget['random_id'] }} = [
+                                    '#36a2eb',
+                                    '#ff6384',
+                                    '#ff9f40',
+                                    '#ffcd56',
+                                    '#4bc0c0',
+                                    '#422163',
+                                    '#c9cbcf'
+                                ];
+
                                 function createCircleMarker(feature, latlng) {
-                                    var thecolor = "{{$widget['importColor']}}" ? (feature.properties.color || '#00AA00') : '#3388ff';
+                                    var thecolor = propertiesMeta{{ $widget['random_id'] }}?.importColor
+                                        ? (feature.properties.color || '#00AA00')
+                                        : '#3388ff';
                                     return L.circleMarker(latlng, {
                                         radius: 3,
                                         color: thecolor,
@@ -324,8 +337,6 @@
                                         fillOpacity: 0.8
                                     });
                                 }
-
-                                const propertiesMeta{{ $widget['random_id'] }} = @json($widget['properties_metadata'] ?? []);
                                 
                                 //Legend Helper Functions
                                 function getLegendField(features, propertiesMeta) {
@@ -364,20 +375,35 @@
                                 }
 
                                 function buildLegend(features, propertiesMeta) {
-
                                     const legendMap = {};
                                     const legendField = getLegendField(features, propertiesMeta);
+                                    const importColor = Boolean(propertiesMeta?.importColor);
+                                    const colorMap = propertiesMeta?.colorMap || {};
+                                    let paletteIndex = 0;
 
-                                    features.forEach(f => {
-                                        const color = f.properties.color || '#3388ff';
-
-                                        let label = "Unknown";
-                                        if (legendField && f.properties[legendField] !== undefined) {
-                                            label = f.properties[legendField];
+                                    function getLabel(feature) {
+                                        if (legendField && feature.properties[legendField] !== undefined && feature.properties[legendField] !== null && feature.properties[legendField] !== '') {
+                                            return String(feature.properties[legendField]);
                                         }
 
+                                        return 'Unknown';
+                                    }
+
+                                    features.forEach(f => {
+                                        const label = getLabel(f);
+
+                                        if (importColor) {
+                                            const color = f.properties.color || '#3388ff';
+                                            if (!legendMap[color]) {
+                                                legendMap[color] = label;
+                                            }
+                                            return;
+                                        }
+
+                                        const color = colorMap[label] || defaultLegendPalette{{ $widget['random_id'] }}[paletteIndex % defaultLegendPalette{{ $widget['random_id'] }}.length];
                                         if (!legendMap[color]) {
                                             legendMap[color] = label;
+                                            paletteIndex += 1;
                                         }
                                     }); 
 
@@ -404,7 +430,9 @@
                                     new L.GeoJSON.AJAX("{{ route('profile.get-geojson', ['filename' => pathinfo($widget['filename'], PATHINFO_FILENAME)]) }}", {
                                         pointToLayer: createCircleMarker,
                                         style: function (feature) {
-                                            var theColor = "{{$widget['importColor']}}" ? (feature.properties.color || '#663399') : '#3388ff';
+                                            var theColor = propertiesMeta{{ $widget['random_id'] }}?.importColor
+                                                ? (feature.properties.color || '#663399')
+                                                : '#3388ff';
                                             return {
                                                 color: theColor,
                                                 fillColor: theColor,
