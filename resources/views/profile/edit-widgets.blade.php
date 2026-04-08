@@ -50,6 +50,31 @@
                         </div>
                     </div>
                 </div>
+                <div id="LineGraph">
+                    <div class="card-header">Edit Graph Widget</div>
+                        <div class="card-body">
+                        <div id="colorList">
+                        <form action="{{ route('profile.edit-widgets', ['dash_id' => $dashboard_info['id'], 'id' => $widget['id']]) }}" method="POST" enctype="multipart/form-data">
+                            @csrf
+                            <div class="form-group">
+                                <?php
+                                    try{
+                                        echo '<input type="color" id="lineColor" name="lineColor" value="'.$metadata['graphSettings']['lineColor'].'"> ';
+                                        echo '<label for="lineColor"> Line Color</label><br>';
+                                        echo '<input type="color" id="lineShade" name="lineShade" value="'.$metadata['graphSettings']['shadeColor'].'"> ';
+                                        echo '<label for="lineShade">Shading Color</label><br>';
+                                    }
+                                    catch(Exception $E){
+                                        echo("failed to load in the line graph options".$E);
+                                    }
+                                ?>
+                            </div>
+                        <button class="btn btn-warning" type="submit">Save and Exit</button>
+                        </form>
+                        </div>
+                        </div>
+                    </div>
+                </div>
                 <div id = "graphAll">
                     <div class="card-header">Edit Graph Widget</div>
                         <div class="card-body">
@@ -57,23 +82,25 @@
                         <form action="{{ route('profile.edit-widgets', ['dash_id' => $dashboard_info['id'], 'id' => $widget['id']]) }}" method="POST" enctype="multipart/form-data">
                             @csrf
                             <div class="form-group">
-                                    <?php
-                                        try { # fails if we're loading a map lol
-                                            if(array_key_exists('colorMap', $metadata))
-                                                foreach ($metadata['colorMap'] as $key => $value) {
-                                                    echo '<input type="color" id="color'.$key.'" name="color'.$key.'" value="'.$value.'"> ';
-                                                    echo '<label for="color'.$key.'">  '.$key.'</label><br>';
-                                                }
-                                            else echo "color map not detected in metadata";
-                                        }
-                                        catch(Exception $E){
-                                            echo "Color Map fetch failed".$E;
-                                        }
-                                    ?>
-                                </div>
+                                <?php
+                                    try { # fails if we're loading a map lol
+                                        if(array_key_exists('colorMap', $metadata))
+                                            foreach ($metadata['colorMap'] as $key => $value) {
+                                                echo '<input type="color" id="color'.$key.'" name="color'.$key.'" value="'.$value.'"> ';
+                                                echo '<label for="color'.$key.'">  '.$key.'</label><br>';
+                                            }
+                                        else echo "color map not detected in metadata";
+                                    }
+                                    catch(Exception $E){
+                                        echo "Color Map fetch failed".$E;
+                                    }
+                                ?>
+                            </div>
                             <button class="btn btn-warning" type="submit">Save and Exit</button>
+                        </form>
                         </div>
-                    </form>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -90,13 +117,17 @@
     $(document).ready( function () {
         // replace the 'slow' with 0 once done
         $("#mapAll").hide(0);
+        $("#lineGraph").hide(0);
         $("#graphAll").hide(0);
         widget_type = {{$widget_type}}
         if(widget_type == 1){
             // map options
             $("#mapAll").show(0);
         }
-        else if(widget_type > 1 && widget_type < 5){
+        else if(widget_type=2){ // Line Graphs
+            $("#lineGraph").show(0);
+        }
+        else if(widget_type > 2 && widget_type < 5){
             // graph options
             $("#graphAll").show(0);
             // just had the for loop be in the html, nobody can tell me what to do!

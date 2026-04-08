@@ -143,19 +143,35 @@ class DashboardController extends Controller
                     $label_location = ($get_widget['widget_type_id'] == 4) ? 'right' : 'top';
                     $colorMap       = $this->getColorArray($get_widget['id'], $labels);
 
+                    if((int)$get_widget['widget_type_id'] == 2){
+                        $datasets = [[
+                            "label" => $decode_metadata['x_axis'] ?? '',
+                            "data" => $values,
+                            "fill" => $decode_metadata['graphSettings']['toShade'] ?? true,
+                            "pointRadius" => $decode_metadata['graphSettings']['pointSize'] ?? 0,
+                            "pointBorderColor" => $this->getColorArray($get_widget['id'], $labels) ?? '#36a2eb',
+                            "borderWidth" => 1,
+                            "backgroundColor" => ($decode_metadata['graphSettings']['shadeColor'].'80' ?? '#36a2eb80'),
+                            "borderColor" => $decode_metadata['graphSettings']['lineColor'] ?? '#36a2eb',
+                        ]];
+                    }
+                    else{
+                        $datasets = [[
+                            'label' => $labels,
+                            'data'  => $values,
+                            'fill'  => true,
+                            'pointRadius' => 0,
+                            'borderWidth' => 1,
+                            'backgroundColor' => $colorMap,
+                        ]];
+                    }
+
                     $chart = Chartjs::build()
                         ->name("Chart" . Str::random())
                         ->type($chart_types[$get_widget['widget_type_id']])
                         ->size(['width' => 400, 'height' => 200])
                         ->labels($labels)
-                        ->datasets([[
-                            "label" => $decode_metadata['x_axis'] ?? '',
-                            "data" => $values,
-                            "fill" => true,
-                            "pointRadius" => 0,
-                            "borderWidth" => 1,
-                            "backgroundColor" => $colorMap,
-                        ]])
+                        ->datasets($datasets)
                         ->options([
                             "interaction" => ["mode" => "nearest", "intersect" => false],
                             "hover" => ["mode" => "nearest", "intersect" => false],
@@ -163,6 +179,7 @@ class DashboardController extends Controller
                             "responsive" => true,
                             "maintainAspectRatio" => false,
                         ]);
+                    
 
                     $get_widget['chart']        = $chart;
                     $get_widget['map_link_id']  = $decode_metadata['mapLinkID'] ?? 'noLink321π'; // <-- expose to Blade
@@ -491,13 +508,6 @@ class DashboardController extends Controller
             $metadata['graphSettings']['toShade'] = true;
         }
         
-        // Line graphs are formatted differently.
-        if((int)$request->widget_type === 2){
-            $metadata['graphSettings']['lineColor'] = '#36a2eb';
-            $metadata['graphSettings']['shadeColor'] = '#36a2eb';
-            $metadata['graphSettings']['pointSize'] = 0;
-            $metadata['graphSettings']['toShade'] = true;
-        }
 
         $widget->metadata = json_encode($metadata);
         $widget->save();
@@ -560,8 +570,9 @@ class DashboardController extends Controller
                 }
             }
         }
-        else if($widget['widget_type_id' == 2]){
-            // still have to implement line graph color support
+        else if($widget['widget_type_id'] === 2){
+            $metadata['graphSettings']['lineColor'] = $request['lineColor'];
+            $metadata['graphSettings']['shadeColor'] = $request['lineShade'];
         }
         $widget->metadata = json_encode($metadata);
         $widget->save(); // should be all I need to save the contents of the widget, right?
