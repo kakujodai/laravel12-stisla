@@ -411,7 +411,42 @@
 						</div>
                     </div>
 					<!--here there be drawing-->
+
+                    
+                    
 					@elseif ($widget['widget_type_id']  == 6)
+                    <div
+                        id="widget-{{ $widget['id'] }}"
+                        class="dashboard-widget chart-widget-wrap"
+                        data-widget-id="{{ $widget['id'] }}"
+                        style="top: {{ $top }}px; left: {{ $left }}px; width: {{ $width }}px; height: {{ $height }}px;"
+                    >
+                        <div class="card">
+                            <x-widget-header 
+   									:name="$widget['name']" 
+						    		:widget-id="$widget['id']" 
+						    		:dashboard-id="$dashboard_info['id']" 
+									:random-id="$widget['random_id']"
+									:widget-type-id="$widget['widget_type_id']" 
+									:has-settings="true"
+								/>
+							<div id="sortable-cards{{ $widget['id'] }}" class="card">
+								<div class="card-body" style="height: calc(100% - 56px);">
+									<div class="no-sort chart-widget"
+										data-widget-id="{{ $widget['id'] }}"
+										
+										style="height: 100%; width: 100%;">
+								<div id="excal" ></div>
+								@viteReactRefresh
+								@vite('resources/js/app.jsx')
+									</div>
+								</div>
+							</div>
+						</div>
+                    </div>
+                    
+                    
+                    <!--
 						<div id="whiteboard" class="card">
 							<div class="card-header flex-header">
 							{{$widget['name']}}
@@ -429,7 +464,7 @@
 						</div>
 								
 								
-					</div>
+					</div>-->
             @else
                 <div
                     id="widget-{{ $widget['id'] }}"
