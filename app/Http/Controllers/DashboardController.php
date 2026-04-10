@@ -549,7 +549,7 @@ class DashboardController extends Controller
             if ($widget->widget_type_id == 1) $mapWidgetList[$widget->id] = $widget->name;
             if ($widget->id == $id) $chosenOne = $widget;
         }
-        $metadata = json_decode($widget->metadata, true);
+        $metadata = json_decode($chosenOne->metadata, true);
 
         return view('profile.edit-widgets', [
             'dashboard_info' => $dashboard_info[0],

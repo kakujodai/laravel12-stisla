@@ -50,7 +50,7 @@
                         </div>
                     </div>
                 </div>
-                <div id="LineGraph">
+                <div id="lineGraph">
                     <div class="card-header">Edit Graph Widget</div>
                         <div class="card-body">
                         <div id="colorList">
@@ -124,7 +124,7 @@
             // map options
             $("#mapAll").show(0);
         }
-        else if(widget_type=2){ // Line Graphs
+        else if(widget_type == 2){ // Line Graphs
             $("#lineGraph").show(0);
         }
         else if(widget_type > 2 && widget_type < 5){
