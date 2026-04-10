@@ -365,10 +365,9 @@
                                 ];
 
                                 function createCircleMarker(feature, latlng) {
-                                    var thecolor = "{{$widget['importColor']}}" ? (feature.properties.color || '#00AA00') : '#3388ff';
-                                    /* var thecolor = propertiesMeta{{ $widget['random_id'] }}?.importColor
+                                   var thecolor = propertiesMeta{{ $widget['random_id'] }}?.importColor
                                         ? (feature.properties.color || '#00AA00')
-                                        : '#3388ff'; */
+                                        : '#3388ff';
                                     return L.circleMarker(latlng, {
                                         radius: 3,
                                         color: thecolor,
@@ -469,10 +468,9 @@
                                     new L.GeoJSON.AJAX("{{ route('profile.get-geojson', ['filename' => pathinfo($widget['filename'], PATHINFO_FILENAME)]) }}", {
                                         pointToLayer: createCircleMarker,
                                         style: function (feature) {
-                                            var theColor = "{{$widget['importColor']}}" ? (feature.properties.color || '#663399') : '#3388ff';
-                                            /* var theColor = propertiesMeta{{ $widget['random_id'] }}?.importColor
+                                            var theColor = propertiesMeta{{ $widget['random_id'] }}?.importColor
                                                 ? (feature.properties.color || '#663399')
-                                                : '#3388ff'; */
+                                                : '#3388ff';
                                             return {
                                                 color: theColor,
                                                 fillColor: theColor,
