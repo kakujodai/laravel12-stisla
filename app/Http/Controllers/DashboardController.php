@@ -57,12 +57,14 @@ class DashboardController extends Controller
                 } else {
                     $get_widget['importColor'] = false;
                 }
-
                 $get_widget['properties_metadata'] = [
                     'importColor' => $get_widget['importColor'],
                     'legend' => [
                         'property' => $decode_metadata['legend_property'] ?? null,
                     ],
+                    'map_tooltip' => $decode_metadata['map_tooltip'] ?? null,
+                    'popup_template' => $decode_metadata['popup_template'] ?? '',
+                    'popup_event' => $decode_metadata['popup_event'] ?? 'click',
                 ];
             }
             elseif ($get_widget['widget_type_id'] == 5) { // TABLE
@@ -454,6 +456,9 @@ class DashboardController extends Controller
                 'map_filename' => $request->map_filename,
                 'importColors' => $request->has('importColors'),
                 'legend_property' => $request->input('legend_property') ?: null,
+                'map_tooltip' => $request->input('map_tooltip') ?: null,
+                'popup_template' => $request->input('popup_template') ?: '',
+                'popup_event' => $request->input('popup_event') ?: 'click',
             ];
         } elseif ((int)$request->widget_type === 5) {
             $metadata = [
@@ -518,9 +523,31 @@ class DashboardController extends Controller
 
         // widget is a map
         if($widget['widget_type_id'] == 1){
-            // hexcode in field called 'Color'
-            if($request->importColors)
-                $metadata->importColors = true;
+            // Ensure metadata is an array
+            if (!is_array($metadata)) $metadata = (array) $metadata;
+
+            // importColors checkbox
+            if ($request->has('importColors')) {
+                $metadata['importColors'] = true;
+            } else {
+                $metadata['importColors'] = false;
+            }
+
+            // legend property (if present)
+            if ($request->has('legend_property')) {
+                $metadata['legend_property'] = $request->input('legend_property') ?: null;
+            }
+
+            // popup / tooltip settings
+            if ($request->has('map_tooltip')) {
+                $metadata['map_tooltip'] = $request->input('map_tooltip') ?: null;
+            }
+            if ($request->has('popup_template')) {
+                $metadata['popup_template'] = $request->input('popup_template') ?: '';
+            }
+            if ($request->has('popup_event')) {
+                $metadata['popup_event'] = $request->input('popup_event') ?: 'click';
+            }
         }
         // widget is a graph
         else if($widget['widget_type_id'] > 2 && $widget['widget_type_id'] < 5){

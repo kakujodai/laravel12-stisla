@@ -223,18 +223,55 @@
             }
 
             function attachFeatureInteractions(layer, props, config = {}) {
-                layer.bindTooltip(
-                    formatTooltipContent(props, config),
-                    { sticky: true, direction: 'top' }
-                );
+                //popup configuration
+                const popupCfg = config.popupConfig || {};
 
-                layer.bindPopup(`
-                    <div class="map-popup">
-                        ${Object.entries(props).map(([k,v]) =>
-                        `<div><strong>${k}:</strong> ${v}</div>`
-                        ).join('')}
-                    </div>
-                `);
+                // Only bind a tooltip when popup is not configured to show on hover/both
+                if (!(popupCfg.event === 'hover' || popupCfg.event === 'both')) {
+                    layer.bindTooltip(
+                        formatTooltipContent(props, config),
+                        { sticky: true, direction: 'top' }
+                    );
+                }
+
+                // Helper to render template strings like "Name: {name}"
+                function renderTemplate(template, properties) {
+                    if (!template) return '';
+                    return template.replace(/\{([^}]+)\}/g, function(_, key) {
+                        return (properties && properties[key] != null) ? properties[key] : '';
+                    });
+                }
+
+                let popupHtml = '';
+
+                if (popupCfg.template && popupCfg.template.trim() !== '') {
+                    // allow raw HTML from template (user-provided)
+                    popupHtml = `<div class="map-popup">${renderTemplate(popupCfg.template, props)}</div>`;
+                } else if (Array.isArray(popupCfg.field)) {
+                    // array of selected fields
+                    if (popupCfg.field.indexOf('ALL_PROPERTIES') !== -1) {
+                        popupHtml = `<div class="map-popup">${Object.entries(props).map(([k,v]) => `<div><strong>${k}:</strong> ${v}</div>`).join('')}</div>`;
+                    } else {
+                        popupHtml = `<div class="map-popup">${popupCfg.field.map(k => `<div><strong>${k}:</strong> ${props[k] != null ? props[k] : ''}</div>`).join('')}</div>`;
+                    }
+                } else if (popupCfg.field && popupCfg.field === 'ALL_PROPERTIES') {
+                    popupHtml = `<div class="map-popup">${Object.entries(props).map(([k,v]) => `<div><strong>${k}:</strong> ${v}</div>`).join('')}</div>`;
+                } else if (popupCfg.field) {
+                    const v = props[popupCfg.field];
+                    popupHtml = `<div class="map-popup"><div><strong>${popupCfg.field}:</strong> ${v != null ? v : ''}</div></div>`;
+                } else {
+                    // default: show a few smart fields
+                    const fields = config.fields && config.fields.length ? config.fields : Object.keys(props).slice(0,5);
+                    popupHtml = `<div class="map-popup">${fields.map(k => `<div><strong>${k}:</strong> ${props[k]}</div>`).join('')}</div>`;
+                }
+
+                // Bind popup and wire trigger (click/hover)
+                layer.bindPopup(popupHtml);
+
+                if (popupCfg.event === 'hover' || popupCfg.event === 'both') {
+                    layer.on('mouseover', function (e) { this.openPopup(); });
+                    layer.on('mouseout', function (e) { this.closePopup(); });
+                }
             }
         </script>
 
@@ -445,7 +482,12 @@
                                             const props = feature.properties || {};
 
                                             attachFeatureInteractions(layer, props, {
-                                                fields: getSmartFields(props)
+                                                fields: getSmartFields(props),
+                                                popupConfig: {
+                                                    field: propertiesMeta{{ $widget['random_id'] }}?.map_tooltip || null,
+                                                    template: propertiesMeta{{ $widget['random_id'] }}?.popup_template || '',
+                                                    event: propertiesMeta{{ $widget['random_id'] }}?.popup_event || 'click'
+                                                }
                                             });
                                         }
                                     });
@@ -518,7 +560,12 @@
                                         if (!layer.feature)
                                             return;
                                         attachFeatureInteractions(layer, layer.feature.properties, {
-                                            fields: getSmartFields(layer.feature.properties)
+                                            fields: getSmartFields(layer.feature.properties),
+                                            popupConfig: {
+                                                field: propertiesMeta{{ $widget['random_id'] }}?.map_tooltip || null,
+                                                template: propertiesMeta{{ $widget['random_id'] }}?.popup_template || '',
+                                                event: propertiesMeta{{ $widget['random_id'] }}?.popup_event || 'click'
+                                            }
                                         });
                                     });
 
@@ -573,7 +620,12 @@
                                                         return;
 
                                                     attachFeatureInteractions(layer, layer.feature.properties, {
-                                                        fields: getSmartFields(layer.feature.properties)
+                                                        fields: getSmartFields(layer.feature.properties),
+                                                        popupConfig: {
+                                                            field: propertiesMeta{{ $widget['random_id'] }}?.map_tooltip || null,
+                                                            template: propertiesMeta{{ $widget['random_id'] }}?.popup_template || '',
+                                                            event: propertiesMeta{{ $widget['random_id'] }}?.popup_event || 'click'
+                                                        }
                                                     });
                                                 });
                                                 map{{ $widget['random_id'] }}.spin(false);
