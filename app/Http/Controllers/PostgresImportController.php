@@ -10,9 +10,10 @@ class PostgresImportController extends Controller
 {
     public function create()
     {
-        // optional: clear any old unfinished import flow
+        // Start fresh each time the user opens the importer
         session()->forget([
             'pg_import.connection',
+            'pg_import.schemas',
             'pg_import.schema',
             'pg_import.tables',
         ]);
@@ -62,21 +63,34 @@ class PostgresImportController extends Controller
                     'pg_password' => $data['pg_password'] ?? '',
                     'pg_sslmode' => $data['pg_sslmode'] ?? 'prefer',
                 ],
+                'pg_import.schemas' => $schemas,
             ]);
 
             session()->forget([
                 'pg_import.schema',
                 'pg_import.tables',
             ]);
+
+            return redirect()->route('profile.postgres.schemas.show');
         } catch (\Throwable $e) {
             return back()
                 ->withInput($request->except('pg_password'))
                 ->withErrors(['pg_host' => 'Connection failed: ' . $e->getMessage()]);
         }
+    }
 
-        return view('profile.postgres-select-schema', [
-            'schemas' => $schemas,
-        ]);
+    public function showSchemas()
+    {
+        $schemas = session('pg_import.schemas');
+        $connection = session('pg_import.connection');
+
+        if (!$schemas || !$connection) {
+            return redirect()
+                ->route('profile.postgres.form')
+                ->withErrors(['pg_host' => 'Your connection session expired. Please reconnect.']);
+        }
+
+        return view('profile.postgres-select-schema', compact('schemas'));
     }
 
     public function tables(Request $request)
@@ -86,8 +100,9 @@ class PostgresImportController extends Controller
         ]);
 
         $connection = session('pg_import.connection');
+        $schemas = session('pg_import.schemas');
 
-        if (!$connection) {
+        if (!$connection || !$schemas) {
             return redirect()
                 ->route('profile.postgres.form')
                 ->withErrors(['pg_host' => 'Your connection session expired. Please reconnect.']);
@@ -115,28 +130,29 @@ class PostgresImportController extends Controller
                  AND t.table_name = c.table_name
                 WHERE c.table_schema = :schema
                   AND t.table_type = 'BASE TABLE'
-                  AND c.udt_name IN ('geometry','geography')
+                  AND c.udt_name IN ('geometry', 'geography')
                 ORDER BY c.table_name
             ");
-
             $stmt->execute(['schema' => $data['schema']]);
             $tables = $stmt->fetchAll(\PDO::FETCH_COLUMN);
 
             if (empty($tables)) {
-                return back()->withErrors([
-                    'schema' => 'No GIS tables (geometry/geography columns) were found in this schema.'
-                ]);
+                return redirect()
+                    ->route('profile.postgres.schemas.show')
+                    ->withErrors(['schema' => 'No GIS tables (geometry/geography columns) were found in this schema.']);
             }
 
             session([
                 'pg_import.schema' => $data['schema'],
                 'pg_import.tables' => $tables,
             ]);
-        } catch (\Throwable $e) {
-            return back()->withErrors(['schema' => 'Failed: ' . $e->getMessage()]);
-        }
 
-        return redirect()->route('profile.postgres.tables.show');
+            return redirect()->route('profile.postgres.tables.show');
+        } catch (\Throwable $e) {
+            return redirect()
+                ->route('profile.postgres.schemas.show')
+                ->withErrors(['schema' => 'Failed: ' . $e->getMessage()]);
+        }
     }
 
     public function showTables()
@@ -170,7 +186,7 @@ class PostgresImportController extends Controller
         }
 
         $userId = auth()->id();
-        $upload_limit = 52428800; // 50 MB
+        $upload_limit = 52428800; // 50MB
         $path = "users/{$userId}";
         $table = $data['table'];
 
@@ -179,7 +195,9 @@ class PostgresImportController extends Controller
         };
 
         if (!$isSafeIdent($schema) || !$isSafeIdent($table)) {
-            return back()->withErrors(['table' => 'Invalid schema/table name.']);
+            return redirect()
+                ->route('profile.postgres.tables.show')
+                ->withErrors(['table' => 'Invalid schema/table name.']);
         }
 
         try {
@@ -210,7 +228,9 @@ class PostgresImportController extends Controller
             ]);
 
             if (!$stmt->fetchColumn()) {
-                return back()->withErrors(['table' => 'That table was not found.']);
+                return redirect()
+                    ->route('profile.postgres.tables.show')
+                    ->withErrors(['table' => 'That table was not found.']);
             }
 
             $stmt = $pdo->prepare("
@@ -227,7 +247,9 @@ class PostgresImportController extends Controller
             $cols = $stmt->fetchAll(\PDO::FETCH_ASSOC);
 
             if (!$cols) {
-                return back()->withErrors(['table' => 'Could not read table columns.']);
+                return redirect()
+                    ->route('profile.postgres.tables.show')
+                    ->withErrors(['table' => 'Could not read table columns.']);
             }
 
             $geomCol = null;
@@ -240,7 +262,9 @@ class PostgresImportController extends Controller
             }
 
             if ($geomCol === null) {
-                return back()->withErrors(['table' => 'No geometry/geography column found in this table.']);
+                return redirect()
+                    ->route('profile.postgres.tables.show')
+                    ->withErrors(['table' => 'No geometry/geography column found in this table.']);
             }
 
             $propCols = [];
@@ -283,17 +307,23 @@ class PostgresImportController extends Controller
             $geojsonText = $stmt->fetchColumn();
 
             if (!$geojsonText) {
-                return back()->withErrors(['table' => 'Export returned no data.']);
+                return redirect()
+                    ->route('profile.postgres.tables.show')
+                    ->withErrors(['table' => 'Export returned no data.']);
             }
 
             if (strlen($geojsonText) > $upload_limit) {
                 $mb = round($upload_limit / 1024 / 1024);
-                return back()->withErrors(['table' => "This dataset is too large. {$mb}MB is the maximum."]);
+                return redirect()
+                    ->route('profile.postgres.tables.show')
+                    ->withErrors(['table' => "This dataset is too large. {$mb}MB is the maximum."]);
             }
 
             $decoded = json_decode($geojsonText, true);
             if (!is_array($decoded) || ($decoded['type'] ?? null) !== 'FeatureCollection') {
-                return back()->withErrors(['table' => 'Exported GeoJSON is invalid.']);
+                return redirect()
+                    ->route('profile.postgres.tables.show')
+                    ->withErrors(['table' => 'Exported GeoJSON is invalid.']);
             }
 
             $geojson_chart_metadata = [
@@ -338,13 +368,16 @@ class PostgresImportController extends Controller
 
             session()->forget([
                 'pg_import.connection',
+                'pg_import.schemas',
                 'pg_import.schema',
                 'pg_import.tables',
             ]);
-        } catch (\Throwable $e) {
-            return back()->withErrors(['table' => 'Import failed: ' . $e->getMessage()]);
-        }
 
-        return redirect()->route('profile.upload')->with('success', 'Imported successfully!');
+            return redirect()->route('profile.upload')->with('success', 'Imported successfully!');
+        } catch (\Throwable $e) {
+            return redirect()
+                ->route('profile.postgres.tables.show')
+                ->withErrors(['table' => 'Import failed: ' . $e->getMessage()]);
+        }
     }
 }

@@ -15,18 +15,10 @@
                     the security of your information, and therefore does not store
                     the information you input into these fields beyond connecting
                     to your database.
+                    <br><br>
+                    <strong>Your database must allow external connections.</strong>
+                    If you are using Supabase or similar services, <strong>use the connection pooler (IPv4)</strong> instead of the direct database host.
                 </p>
-
-                <p>
-                    You will need:
-                </p>
-
-                <ul>
-                    <li>Host</li>
-                    <li>Port (usually 5432)</li>
-                    <li>Database name</li>
-                    <li>Username & password</li>
-                </ul>
             </div>
         </div>
 

@@ -13,10 +13,12 @@ Route::get('/', function () {
 Auth::routes();
 
 Route::middleware(['auth'])->group(function () {
+    
     Route::post('/profile/dashboard/save-widget-layout', [DashboardController::class, 'save_widget_layout']) ->name('profile.dashboard.save-widget-layout');
     Route::get('/profile/postgres/tables', [PostgresImportController::class, 'showTables'])->name('profile.postgres.tables.show'); //prevents switching from post to get upon refresh
     Route::post('/profile/postgres/import', [PostgresImportController::class, 'import'])->name('profile.postgres.import');
     Route::get('/profile/postgres', [PostgresImportController::class, 'create'])->name('profile.postgres.form');
+    Route::get('/profile/postgres/schemas', [PostgresImportController::class, 'showSchemas'])->name('profile.postgres.schemas.show');
     Route::post('/profile/postgres/schemas', [PostgresImportController::class, 'schemas'])->name('profile.postgres.schemas');
     Route::post('/profile/postgres/tables', [PostgresImportController::class, 'tables'])->name('profile.postgres.tables');
     Route::get('/home', [App\Http\Controllers\HomeController::class, 'index'])->name('home');
