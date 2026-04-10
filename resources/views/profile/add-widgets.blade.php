@@ -97,6 +97,37 @@
                                 @endforeach
                             </select>
 
+                            <div id="map_forms" class="form-group" style="display:none;">
+                                <div class="form-check mb-2">
+                                    <input class="form-check-input" type="checkbox" id="importColors" name="importColors" value="importColors">
+                                    <label class="form-check-label" for="importColors">Use GeoJSON color property for map colors</label>
+                                </div>
+
+                                <label for="legend_property">Select the property to use for legend labels</label>
+                                <select class="form-control mb-2" id="legend_property" name="legend_property">
+                                    <option value="">-- auto detect --</option>
+                                </select>
+
+                                <div id="map_popup_group" class="form-group" style="display:none;">
+                                    <label for="map_tooltip">Select which properties to show on popups</label>
+                                    <select id="map_tooltip" name="map_tooltip[]" class="form-control mb-2" multiple style="width:100%;">
+                                        <option value="">-- auto detect --</option>
+                                    </select>
+                                    <label for="map_popup_event">Popup trigger</label>
+                                    <select id="map_popup_event" name="popup_event" class="form-control mb-2">
+                                        <option value="click">On click</option>
+                                        <option value="hover">On hover</option>
+                                        <option value="both">On click + hover</option>
+                                    </select>
+
+                                    <div id="popup_template_group" style="display:none;">
+                                        <label for="popup_template">Or provide a custom popup template</label>
+                                        <textarea id="map_popup" name="popup_template" class="form-control mb-2" rows="4" placeholder="Use html and placeholders like {property_name} to inject feature properties. Example: '<strong>Name:</strong> {name}<br>Population: {pop}'"></textarea>
+
+                                    </div>
+                                </div>
+                            </div>
+
                             {{-- Chart controls --}}
                             <div id="chart_forms" class="form-group" style="display:none;">
                                 <label for="norm_control">Select whether or not to normalize multiple values.</label>
@@ -108,14 +139,14 @@
                                 <div id="x_axis_group" class="form-group">
                                     <label for="x_axis">Select the property you want to use on the x axis.</label>
                                     <select class="form-control mb-2" id="x_axis" name="x_axis">
-                                        <option value="">Loading..</option>
+                                        <option value="">Loading...</option>
                                     </select>
                                 </div>
 
                                 <div id="y_axis_group" class="form-group">
                                     <label for="y_axis">Select the property you want to use on the y axis.</label>
                                     <select class="form-control mb-2" id="y_axis" name="y_axis">
-                                        <option value="">Loading..</option>
+                                        <option value="">Loading...</option>
                                     </select>
                                 </div>
 
@@ -158,7 +189,7 @@
 
                                 <div class="col-selector-wrap">
                                     <select id="table_columns" class="form-control mb-2" name="table_columns[]" multiple="multiple" style="width:100%;">
-                                        <option value="">Loading..</option>
+                                        <option value="">Loading...</option>
                                     </select>
                                 </div>
 
@@ -251,6 +282,50 @@
                 });
             }
 
+        function update_legend_select(filename) {
+            $.post('/profile/get-file-metadata', { filename }).done(function (response) {
+                const $sel = $('#legend_property');
+                const current = $sel.val() || '';
+
+                $sel.empty();
+
+                $.each(response.table_columns || [], function(_, value) {
+                    $sel.append(`<option value="${value}">${value}</option>`);
+                });
+
+                if ($sel.find(`option[value="${current}"]`).length) {
+                    $sel.val(current);
+                }
+            });
+        }
+
+        // Populate popup options and toggle custom template UI
+        function update_popup_select(filename) {
+            $.post('/profile/get-file-metadata', { filename }).done(function (response) {
+                const $sel = $('#map_tooltip');
+                const current = $sel.val() || [];
+
+                $sel.empty();
+                $sel.append('<option value="ALL_PROPERTIES">All properties</option>');
+
+                $.each(response.table_columns || [], function(_, value) {
+                    $sel.append(`<option value="${value}">${value}</option>`);
+                });
+
+                $sel.append('<option value="custom">Custom popup...</option>');
+
+                // Restore previous selection (string or array)
+                if (Array.isArray(current) && current.length) {
+                    $sel.val(current);
+                } else if (current) {
+                    $sel.val([current]);
+                } else {
+                    $sel.val([]);
+                }
+                $sel.trigger('change');
+            });
+        }
+
             function update_normalization_select(filename) {
                 const $sel = $('#norm_form1');
                 update_axis_select(filename);
@@ -264,37 +339,38 @@
                 });
             }
 
-            $('#table_columns').select2({
-                placeholder: 'Select table properties',
-                closeOnSelect: false,
-                allowClear: true,
-                dropdownParent: $('.col-selector-wrap')
-            });
+        // initialize Select2
+        $('#table_columns').select2({
+            placeholder: 'Select table properties',
+            closeOnSelect: false,
+            allowClear: true,
+            dropdownParent: $('.col-selector-wrap')  //keep dropdown inside the styled box
+        });
 
-            $('#widget_type').on('change', function () {
-                const t = $(this).val();
+        $('#widget_type').on('change', function () {
+            const t = $(this).val();
+            if (t == 1) { // map
+                $("#chart_forms").hide('slow');
+                $("#table_column").hide('slow');
+            } else if (t == 5) { // table
+                $("#chart_forms").hide('slow');
+                $("#table_column").show('slow');
+                update_table_select($('#map_filename').val());
+            } else { // charts
+                $("#table_column").hide('slow');
+                $("#chart_forms").show('slow');
+                $("#norm_form").hide('slow');
+                update_axis_select($('#map_filename').val());
+            }
+        });
 
-                if (t == 1) {
-                    $("#chart_forms").hide('slow');
-                    $("#table_column").hide('slow');
-                } else if (t == 5) {
-                    $("#chart_forms").hide('slow');
-                    $("#table_column").show('slow');
-                    update_table_select($('#map_filename').val());
-                } else {
-                    $("#table_column").hide('slow');
-                    $("#chart_forms").show('slow');
-                    $("#norm_form").hide('slow');
-                    update_axis_select($('#map_filename').val());
-                }
-            });
-
-            $('#map_filename').on('change', function () {
-                const file = $(this).val();
-                update_axis_select(file);
-                update_table_select(file);
-                update_normalization_select(file);
-            });
+        $('#map_filename').on('change', function () {
+            const file = $(this).val();
+            // refresh both sets; the visible block will show the right one
+            update_axis_select(file);
+            update_table_select(file);
+            update_normalization_select(file);
+        });
 
             $('#norm_control').on('change', function () {
                 const cont = $(this).val();
@@ -314,19 +390,7 @@
                 }
             });
 
-            $('#widget_type').trigger('change');
-        });
-
-        document.addEventListener("DOMContentLoaded", function () {
-            const checkbox = document.getElementById("enableTableMapLink");
-            const dropdown = document.getElementById("tableMapLinkDropdown");
-
-            function toggleDropdown() {
-                dropdown.style.display = checkbox.checked ? "block" : "none";
-            }
-
-            toggleDropdown();
-            checkbox.addEventListener("change", toggleDropdown);
-        });
+        $('#widget_type').trigger('change');
+    });
     </script>
 @endpush

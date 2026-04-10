@@ -107,6 +107,33 @@
             min-height: 44px;
             box-shadow: none;
         }
+
+        /* Legend Styles */
+        .legend {
+            background: white;
+            padding: 10px;
+            border-radius: 6px;
+            line-height: 1.4;
+            box-shadow: 0 0 6px rgba(0,0,0,0.2);
+            font-size: 13px;
+        }
+
+        /* Tooltip Styles*/
+        .map-tooltip {
+            font-size: 12px;
+            line-height: 1.4;
+        }
+
+        .map-tooltip div {
+            margin-bottom: 2px;
+        }
+
+        .leaflet-tooltip {
+            background: rgba(255,255,255,0.95);
+            border: 1px solid #ccc;
+            border-radius: 6px;
+            padding: 6px 8px;
+        }
     </style>
 @endpush
 
@@ -167,6 +194,84 @@
                     clearTimeout(t);
                     t = setTimeout(() => fn(...args), ms);
                 };
+            }
+
+            //Format Tooltip for Leaflet Maps
+            function formatTooltipContent(properties, config = {}) {
+                if (!properties)
+                    return "No data";
+
+                const keys = Object.keys(properties);
+
+                const fields = config.fields && config.fields.length ? config.fields : keys.slice(0, 5);
+
+                return `
+                    <div class="map-tooltip">
+                        ${fields.map(key => `
+                        <div><strong>${key}:</strong> ${properties[key]}</div>
+                        `).join('')}
+                    </div>
+                `;
+            }
+
+            function getSmartFields(properties) {
+                const priority = ['name', 'title', 'id', 'type', 'category'];
+                const keys = Object.keys(properties);
+
+                const selected = priority.filter(p => keys.includes(p));
+                return selected.length ? selected : keys.slice(0, 4);
+            }
+
+            function attachFeatureInteractions(layer, props, config = {}) {
+                //popup configuration
+                const popupCfg = config.popupConfig || {};
+
+                // Only bind a tooltip when popup is not configured to show on hover/both
+                if (!(popupCfg.event === 'hover' || popupCfg.event === 'both')) {
+                    layer.bindTooltip(
+                        formatTooltipContent(props, config),
+                        { sticky: true, direction: 'top' }
+                    );
+                }
+
+                // Helper to render template strings like "Name: {name}"
+                function renderTemplate(template, properties) {
+                    if (!template) return '';
+                    return template.replace(/\{([^}]+)\}/g, function(_, key) {
+                        return (properties && properties[key] != null) ? properties[key] : '';
+                    });
+                }
+
+                let popupHtml = '';
+
+                if (popupCfg.template && popupCfg.template.trim() !== '') {
+                    // allow raw HTML from template (user-provided)
+                    popupHtml = `<div class="map-popup">${renderTemplate(popupCfg.template, props)}</div>`;
+                } else if (Array.isArray(popupCfg.field)) {
+                    // array of selected fields
+                    if (popupCfg.field.indexOf('ALL_PROPERTIES') !== -1) {
+                        popupHtml = `<div class="map-popup">${Object.entries(props).map(([k,v]) => `<div><strong>${k}:</strong> ${v}</div>`).join('')}</div>`;
+                    } else {
+                        popupHtml = `<div class="map-popup">${popupCfg.field.map(k => `<div><strong>${k}:</strong> ${props[k] != null ? props[k] : ''}</div>`).join('')}</div>`;
+                    }
+                } else if (popupCfg.field && popupCfg.field === 'ALL_PROPERTIES') {
+                    popupHtml = `<div class="map-popup">${Object.entries(props).map(([k,v]) => `<div><strong>${k}:</strong> ${v}</div>`).join('')}</div>`;
+                } else if (popupCfg.field) {
+                    const v = props[popupCfg.field];
+                    popupHtml = `<div class="map-popup"><div><strong>${popupCfg.field}:</strong> ${v != null ? v : ''}</div></div>`;
+                } else {
+                    // default: show a few smart fields
+                    const fields = config.fields && config.fields.length ? config.fields : Object.keys(props).slice(0,5);
+                    popupHtml = `<div class="map-popup">${fields.map(k => `<div><strong>${k}:</strong> ${props[k]}</div>`).join('')}</div>`;
+                }
+
+                // Bind popup and wire trigger (click/hover)
+                layer.bindPopup(popupHtml);
+
+                if (popupCfg.event === 'hover' || popupCfg.event === 'both') {
+                    layer.on('mouseover', function (e) { this.openPopup(); });
+                    layer.on('mouseout', function (e) { this.closePopup(); });
+                }
             }
         </script>
 
@@ -248,8 +353,22 @@
                                     "Open Street Map TOPO-WMS": topowmsLayer,
                                 };
 
+                                /* const propertiesMeta{{ $widget['random_id'] }} = @json($widget['properties_metadata'] ?? []);
+                                const defaultLegendPalette{{ $widget['random_id'] }} = [
+                                    '#36a2eb',
+                                    '#ff6384',
+                                    '#ff9f40',
+                                    '#ffcd56',
+                                    '#4bc0c0',
+                                    '#422163',
+                                    '#c9cbcf'
+                                ]; */
+
                                 function createCircleMarker(feature, latlng) {
                                     var thecolor = "{{$widget['importColor']}}" ? (feature.properties.color || '#00AA00') : '#3388ff';
+                                    /* var thecolor = propertiesMeta{{ $widget['random_id'] }}?.importColor
+                                        ? (feature.properties.color || '#00AA00')
+                                        : '#3388ff'; */
                                     return L.circleMarker(latlng, {
                                         radius: 3,
                                         color: thecolor,
@@ -257,12 +376,103 @@
                                         fillOpacity: 0.8
                                     });
                                 }
+                                
+                                //Legend Helper Functions
+                                function getLegendField(features, propertiesMeta) {
+                                    if (propertiesMeta?.legend?.property) {
+                                        return propertiesMeta.legend.property;
+                                    }
+
+                                    if (propertiesMeta?.x_axis && propertiesMeta.x_axis.length > 0) {
+                                            const candidate = propertiesMeta.x_axis.find(field =>
+                                                !field.toLowerCase().includes('id') &&
+                                                !field.toLowerCase().includes('object')
+                                            ); 
+                                        return candidate || propertiesMeta.x_axis[0];
+                                    }
+
+                                    const sample = features[0]?.properties || {};
+                                    const keys = Object.keys(sample);
+
+                                    for (let key of keys) {
+                                        const values = new Set();
+
+                                        for (let f of features) {
+                                            if (f.properties[key] != null) {
+                                                values.add(f.properties[key]);
+                                            }
+                                            if (values.size > 10)
+                                                break;
+                                        }
+
+                                        if (values.size > 1 && values.size <= 10) {
+                                                return key;
+                                        }
+                                    }
+
+                                    return null;
+                                }
+
+                                function buildLegend(features, propertiesMeta) {
+                                    const legendMap = {};
+                                    const legendField = getLegendField(features, propertiesMeta);
+                                    const importColor = Boolean(propertiesMeta?.importColor);
+                                    const colorMap = propertiesMeta?.colorMap || {};
+                                    let paletteIndex = 0;
+
+                                    function getLabel(feature) {
+                                        if (legendField && feature.properties[legendField] !== undefined && feature.properties[legendField] !== null && feature.properties[legendField] !== '') {
+                                            return String(feature.properties[legendField]);
+                                        }
+
+                                        return 'Unknown';
+                                    }
+
+                                    features.forEach(f => {
+                                        const label = getLabel(f);
+
+                                        if (importColor) {
+                                            const color = f.properties.color || '#3388ff';
+                                            if (!legendMap[color]) {
+                                                legendMap[color] = label;
+                                            }
+                                            return;
+                                        }
+
+                                        const color = colorMap[label] || defaultLegendPalette{{ $widget['random_id'] }}[paletteIndex % defaultLegendPalette{{ $widget['random_id'] }}.length];
+                                        if (!legendMap[color]) {
+                                            legendMap[color] = label;
+                                            paletteIndex += 1;
+                                        }
+                                    }); 
+
+                                    return legendMap;
+                                }
+
+                                function renderLegend(legendMap) {
+                                    let html = "<b>Legend</b><br>";
+
+                                    Object.entries(legendMap).forEach(([color, label]) => {
+                                        html += `
+                                            <div style="display:flex; align-items:center; margin-bottom:4px;">
+                                                <span style="width:12px;height:12px;background:${color};display:inline-block;margin-right:6px;"></span>
+                                                ${label}
+                                            </div>
+                                        `;
+                                    });  
+
+                                    return html;
+                                }
+
 
                                 var {{ pathinfo($widget['filename'], PATHINFO_FILENAME) }}{{ $widget['random_id'] }} =
                                     new L.GeoJSON.AJAX("{{ route('profile.get-geojson', ['filename' => pathinfo($widget['filename'], PATHINFO_FILENAME)]) }}", {
                                         pointToLayer: createCircleMarker,
                                         style: function (feature) {
                                             var theColor = "{{$widget['importColor']}}" ? (feature.properties.color || '#663399') : '#3388ff';
+                                            /* var theColor = propertiesMeta{{ $widget['random_id'] }}?.importColor
+                                                ? (feature.properties.color || '#663399')
+                                                : '#3388ff'; */
                                             return {
                                                 color: theColor,
                                                 fillColor: theColor,
@@ -272,8 +482,17 @@
                                             };
                                         },
                                         onEachFeature: function (feature, layer) {
-                                            layer.bindPopup('<pre>' + JSON.stringify(feature.properties, null, ' ').replace(/[\{\}"]/g, '') + '</pre>');
-                                        },
+                                            const props = feature.properties || {};
+
+                                            attachFeatureInteractions(layer, props, {
+                                                fields: getSmartFields(props),
+                                                popupConfig: {
+                                                    field: propertiesMeta{{ $widget['random_id'] }}?.map_tooltip || null,
+                                                    template: propertiesMeta{{ $widget['random_id'] }}?.popup_template || '',
+                                                    event: propertiesMeta{{ $widget['random_id'] }}?.popup_event || 'click'
+                                                }
+                                            });
+                                        }
                                     });
 
                                 overlayMaps{{ $widget['random_id'] }}.{{ pathinfo($widget['filename'], PATHINFO_FILENAME) }} = {{ pathinfo($widget['filename'], PATHINFO_FILENAME) }}{{ $widget['random_id'] }};
@@ -288,6 +507,17 @@
                                     map: map{{ $widget['random_id'] }},
                                     layer: {{ pathinfo($widget['filename'], PATHINFO_FILENAME) }}{{ $widget['random_id'] }}
                                 };
+
+                                //Legend Control Section
+                                var legend{{ $widget['random_id'] }} = L.control({ position: 'bottomright' });
+                                
+                                legend{{ $widget['random_id'] }}.onAdd = function () {
+                                    const div = L.DomUtil.create('div', 'info legend legend-{{ $widget['random_id'] }}');
+                                    div.innerHTML = "<b>Legend</b><br>";
+                                    return div;
+                                };
+
+                                legend{{ $widget['random_id'] }}.addTo(map{{ $widget['random_id'] }});
 
                                 const viewKey{{ $widget['random_id'] }} = 'mapview:dash{{ $dashboard_info["id"] }}:widget{{ $widget["id"] }}';
 
@@ -335,8 +565,37 @@
                                     }
 
                                     {{ pathinfo($widget['filename'], PATHINFO_FILENAME) }}{{ $widget['random_id'] }}.eachLayer(function (layer) {
-                                        layer.bindPopup('<pre>'+JSON.stringify(layer.feature.properties,null,' ').replace(/[\{\}"]/g,'')+'</pre>');
+                                        if (!layer.feature)
+                                            return;
+                                        attachFeatureInteractions(layer, layer.feature.properties, {
+                                            fields: getSmartFields(layer.feature.properties),
+                                            popupConfig: {
+                                                field: propertiesMeta{{ $widget['random_id'] }}?.map_tooltip || null,
+                                                template: propertiesMeta{{ $widget['random_id'] }}?.popup_template || '',
+                                                event: propertiesMeta{{ $widget['random_id'] }}?.popup_event || 'click'
+                                            }
+                                        });
                                     });
+
+                                    //Legend building
+                                    const features = [];
+
+                                    {{ pathinfo($widget['filename'], PATHINFO_FILENAME); }}{{ $widget['random_id'] }}
+                                        .eachLayer(function (layer) {
+                                            if (layer.feature) {
+                                                features.push(layer.feature);
+                                            }
+                                    });
+
+                                    const legendData = buildLegend(
+                                        features,
+                                        propertiesMeta{{ $widget['random_id'] }}
+                                    );
+
+                                    const legendHtml = renderLegend(legendData);
+
+                                    // Target this map's legend specifically
+                                    document.querySelector(".legend-{{ $widget['random_id'] }}").innerHTML = legendHtml;
 
                                     broadcastBBox();
                                     mapDataLoaded{{ $widget['random_id'] }} = true;
@@ -365,7 +624,17 @@
                                             if (data) {
                                                 overlayMaps{{ $widget['random_id'] }}[full_name].addData(data);
                                                 overlayMaps{{ $widget['random_id'] }}[full_name].eachLayer(function (layer) {
-                                                    layer.bindPopup('<pre>'+JSON.stringify(layer.feature.properties,null,' ').replace(/[\{\}"]/g,'')+'</pre>');
+                                                    if (!layer.feature)
+                                                        return;
+
+                                                    attachFeatureInteractions(layer, layer.feature.properties, {
+                                                        fields: getSmartFields(layer.feature.properties),
+                                                        popupConfig: {
+                                                            field: propertiesMeta{{ $widget['random_id'] }}?.map_tooltip || null,
+                                                            template: propertiesMeta{{ $widget['random_id'] }}?.popup_template || '',
+                                                            event: propertiesMeta{{ $widget['random_id'] }}?.popup_event || 'click'
+                                                        }
+                                                    });
                                                 });
                                                 map{{ $widget['random_id'] }}.spin(false);
                                             } else {
