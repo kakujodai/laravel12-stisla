@@ -353,7 +353,7 @@
                                     "Open Street Map TOPO-WMS": topowmsLayer,
                                 };
 
-                                /* const propertiesMeta{{ $widget['random_id'] }} = @json($widget['properties_metadata'] ?? []);
+                                const propertiesMeta{{ $widget['random_id'] }} = @json($widget['properties_metadata'] ?? (object)[]);
                                 const defaultLegendPalette{{ $widget['random_id'] }} = [
                                     '#36a2eb',
                                     '#ff6384',
@@ -362,7 +362,7 @@
                                     '#4bc0c0',
                                     '#422163',
                                     '#c9cbcf'
-                                ]; */
+                                ];
 
                                 function createCircleMarker(feature, latlng) {
                                     var thecolor = "{{$widget['importColor']}}" ? (feature.properties.color || '#00AA00') : '#3388ff';
