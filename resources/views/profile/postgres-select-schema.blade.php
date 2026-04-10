@@ -15,17 +15,9 @@
                     <form action="{{ route('profile.postgres.tables') }}" method="POST">
                         @csrf
 
-                        <!-- keep connection info alive -->
-                        <input type="hidden" name="pg_host" value="{{ $connection['pg_host'] }}">
-                        <input type="hidden" name="pg_port" value="{{ $connection['pg_port'] }}">
-                        <input type="hidden" name="pg_database" value="{{ $connection['pg_database'] }}">
-                        <input type="hidden" name="pg_username" value="{{ $connection['pg_username'] }}">
-                        <input type="hidden" name="pg_password" value="{{ $connection['pg_password'] }}">
-                        <input type="hidden" name="pg_sslmode" value="{{ $connection['pg_sslmode'] ?? 'prefer' }}">
-
                         <div class="form-group mb-4">
                             <label for="schema">Schema</label>
-                            <select name="schema" class="form-control">
+                            <select name="schema" id="schema" class="form-control">
                                 @foreach($schemas as $schema)
                                     <option value="{{ $schema }}">{{ $schema }}</option>
                                 @endforeach
@@ -39,7 +31,6 @@
                         <a href="{{ route('profile.postgres.form') }}" class="btn btn-secondary">
                             Back
                         </a>
-
                     </form>
 
                 </div>
