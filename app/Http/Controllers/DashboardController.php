@@ -75,8 +75,8 @@ class DashboardController extends Controller
                     'popup_template' => $decode_metadata['popup_template'] ?? '',
                     'popup_event' => $decode_metadata['popup_event'] ?? 'click',
                 ];
-            }
-            elseif ($get_widget['widget_type_id'] == 5) { // TABLE
+
+                // TABLE-specific processing
                 $geojson = FileUpload::select('geojson')
                     ->where('user_id', $userId)
                     ->where('filename', $get_map_filename)
