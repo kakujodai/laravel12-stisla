@@ -719,7 +719,9 @@
 							{{$widget['name']}}
                                 <form action="{{ route('profile.delete-widget', ['id' => $widget['id'], 'dash_id' => $dashboard_info['id']]) }}" method="POST" style="display: inline-block;">
                                             @csrf
-                                     <button type="submit" class="btn btn-secondary rounded-sm fas fa-trash"></button>
+                                     <button type="submit" class="btn btn-secondary rounded-sm">
+                                         <i class="fas fa-trash" aria-hidden="true"></i>
+                                     </button>
                                 </form>
 							</div>
 						<div class ="card-body">
@@ -740,21 +742,14 @@
                     style="top: {{ $top }}px; left: {{ $left }}px; width: {{ $width }}px; height: {{ $height }}px;"
                 >
                     <div class="card">
-                        <div class="card-header">
-                            <div class="row">
-                                <div class="col-sm-10 text-left">
-                                    <h2 class="card-title">{{ $widget['name'] }}</h2>
-                                </div>
-                                <div class="col-sm-2">
-                                    <div class="btn-group float-right ms-2">
-                                        <form id="delete-{{ $widget['id'] }}" action="{{ route('profile.delete-widget', ['id' => $widget['id'], 'dash_id' => $dashboard_info['id']]) }}" method="POST" style="display: inline-block;">
-                                            @csrf
-                                            <button type="submit" class="btn btn-sm btn-warning rounded-sm fas fa-trash"></button>
-                                        </form>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
+                        <x-widget-header 
+                            :name="$widget['name']" 
+                            :widget-id="$widget['id']" 
+                            :dashboard-id="$dashboard_info['id']" 
+                            :random-id="$widget['random_id']"
+                            :widget-type-id="$widget['widget_type_id']" 
+                            :has-settings="true"
+                        />
 
                         <div class="px-3 pb-2">
                             <div id="colWrap-{{ $widget['random_id'] }}" class="col-selector-wrap" style="border:1px solid #ddd;border-radius:6px;padding:10px;">

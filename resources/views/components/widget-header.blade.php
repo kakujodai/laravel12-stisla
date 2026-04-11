@@ -15,6 +15,8 @@
     <!-- Right: Delete button -->
     <form action="{{ route('profile.delete-widget', ['id' => $widgetId, 'dash_id' => $dashboardId]) }}" method="POST" style="display:inline-block;">
         @csrf
-        <button type="submit" class="btn btn-secondary btn-sm rounded-sm fas fa-trash"></button>
+        <button type="submit" class="btn btn-secondary btn-sm rounded-sm">
+            <i class="fas fa-trash" aria-hidden="true"></i>
+        </button>
     </form>
 </div>

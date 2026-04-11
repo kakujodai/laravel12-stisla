@@ -35,9 +35,11 @@
                                         </td>
                                         <td>
                                             <form action="{{ route('profile.delete-dashboard', ['id' => $dashboard['id']]) }}" method="POST" style="display: inline-block;">
-								                @csrf
-								                <button type="submit" class="btn btn-secondary rounded-sm fas fa-trash"></button>
-							                </form>
+                                    		@csrf
+                                    		<button type="submit" class="btn btn-secondary rounded-sm">
+                                    		    <i class="fas fa-trash" aria-hidden="true"></i>
+                                    		</button>
+                            </form>
                                         </td>
                                     </tr>
                                     @endforeach

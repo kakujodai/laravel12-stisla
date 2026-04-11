@@ -22,10 +22,12 @@
                                     <td>{{$file['title']}}</td>
                                     <td>{{$file['filename']}}</td>
                                     <td>
-                                        <form action="{{ route('profile.delete-upload') }}" method="POST" onsubmit="return confirm('Delete this file?');">
+                                            <form action="{{ route('profile.delete-upload') }}" method="POST" onsubmit="return confirm('Delete this file?');">
                                             @csrf
                                             <input type="hidden" name="filename" value="{{$file['filename']}}">
-                                            <button type="submit" class="btn btn-danger rounded-sm fas fa-trash"></button>
+                                            <button type="submit" class="btn btn-danger rounded-sm">
+                                                <i class="fas fa-trash" aria-hidden="true"></i>
+                                            </button>
                                         </form>
                                     </td>
                                 </tr>
