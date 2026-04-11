@@ -353,7 +353,7 @@
                                     "Open Street Map TOPO-WMS": topowmsLayer,
                                 };
 
-                                const propertiesMeta{{ $widget['random_id'] }} = @json($widget['properties_metadata'] ?? (object)[]);
+                                const propertiesMeta{{ $widget['random_id'] }} = @json($widget["metadata"]);
                                 const defaultLegendPalette{{ $widget['random_id'] }} = [
                                     '#36a2eb',
                                     '#ff6384',
@@ -365,9 +365,9 @@
                                 ];
 
                                 function createCircleMarker(feature, latlng) {
-                                   var thecolor = propertiesMeta{{ $widget['random_id'] }}?.importColor
-                                        ? (feature.properties.color || '#00AA00')
-                                        : '#3388ff';
+                                    var thecolor = (({{$widget['importColor']+0}}) 
+                                        ? (feature.properties.color || '#00AA00') 
+                                        : '#3388ff');
                                     return L.circleMarker(latlng, {
                                         radius: 3,
                                         color: thecolor,
@@ -415,7 +415,7 @@
                                 function buildLegend(features, propertiesMeta) {
                                     const legendMap = {};
                                     const legendField = getLegendField(features, propertiesMeta);
-                                    const importColor = Boolean(propertiesMeta?.importColor);
+                                    const importColor = Boolean(propertiesMeta?.importColors);
                                     const colorMap = propertiesMeta?.colorMap || {};
                                     let paletteIndex = 0;
 
@@ -468,9 +468,9 @@
                                     new L.GeoJSON.AJAX("{{ route('profile.get-geojson', ['filename' => pathinfo($widget['filename'], PATHINFO_FILENAME)]) }}", {
                                         pointToLayer: createCircleMarker,
                                         style: function (feature) {
-                                            var theColor = propertiesMeta{{ $widget['random_id'] }}?.importColor
+                                            var theColor = (({{ $widget['importColor']+0 }})
                                                 ? (feature.properties.color || '#663399')
-                                                : '#3388ff';
+                                                : '#3388ff');
                                             return {
                                                 color: theColor,
                                                 fillColor: theColor,
