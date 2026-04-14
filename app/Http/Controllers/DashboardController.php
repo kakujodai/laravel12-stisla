@@ -42,6 +42,8 @@ class DashboardController extends Controller
             $values = [];
 
             $decode_metadata = json_decode($get_widget['metadata'], true) ?: [];
+            // expose decoded metadata to the view as an array so Blade's @json produces an object
+            $get_widget['metadata'] = $decode_metadata;
             $get_widget['layout'] = $decode_metadata['layout'] ?? [];
             $get_map_filename = $decode_metadata['map_filename'] ?? null;
 
@@ -69,7 +71,8 @@ class DashboardController extends Controller
                 $get_widget['properties_metadata'] = [
                     'importColor' => $get_widget['importColor'],
                     'legend' => [
-                        'property' => $decode_metadata['legend_property'] ?? null,
+                        // support both new nested format and legacy flat key
+                        'property' => $decode_metadata['legend']['property'] ?? $decode_metadata['legend_property'] ?? null,
                     ],
                     'map_tooltip' => $decode_metadata['map_tooltip'] ?? null,
                     'popup_template' => $decode_metadata['popup_template'] ?? '',
@@ -491,7 +494,7 @@ class DashboardController extends Controller
             $metadata = [
                 'map_filename' => $request->map_filename,
                 'importColors' => $request->has('importColors'),
-                'legend_property' => $request->input('legend_property') ?: null,
+                'legend' => [ 'property' => $request->input('legend_property') ?: null ],
                 'map_tooltip' => $request->input('map_tooltip') ?: null,
                 'popup_template' => $request->input('popup_template') ?: '',
                 'popup_event' => $request->input('popup_event') ?: 'click',
@@ -583,7 +586,7 @@ class DashboardController extends Controller
 
             // legend property (if present)
             if ($request->has('legend_property')) {
-                $metadata['legend_property'] = $request->input('legend_property') ?: null;
+                $metadata['legend'] = [ 'property' => $request->input('legend_property') ?: null ];
             }
 
             // popup / tooltip settings
