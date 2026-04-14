@@ -352,6 +352,11 @@
             if (t == 1) { // map
                 $("#chart_forms").hide('slow');
                 $("#table_column").hide('slow');
+                $("#map_forms").show('slow');
+                $("#map_popup_group").show('slow');
+                // populate legend & popup selects for the currently chosen file
+                update_legend_select($('#map_filename').val());
+                update_popup_select($('#map_filename').val());
             } else if (t == 5) { // table
                 $("#chart_forms").hide('slow');
                 $("#table_column").show('slow');
@@ -370,6 +375,28 @@
             update_axis_select(file);
             update_table_select(file);
             update_normalization_select(file);
+            // also refresh legend and popup options when changing file
+            update_legend_select(file);
+            update_popup_select(file);
+        });
+
+        // initialize popup selector (show custom template area when chosen)
+        $('#map_tooltip').on('change', function () {
+            const val = $(this).val() || [];
+            // if 'custom' is selected, show the custom template textarea
+            if (Array.isArray(val) ? val.indexOf('custom') !== -1 : val === 'custom') {
+                $('#popup_template_group').show('slow');
+            } else {
+                $('#popup_template_group').hide('slow');
+            }
+        });
+
+        // make map_tooltip a nicer multi-select like table_columns
+        $('#map_tooltip').select2({
+            placeholder: 'Select popup properties',
+            closeOnSelect: false,
+            allowClear: true,
+            width: '100%'
         });
 
             $('#norm_control').on('change', function () {
