@@ -413,7 +413,7 @@
                                 }
 
                                 function buildLegend(features, propertiesMeta) {
-                                    const legendMap = {};
+                                    const labelToColor = {};
                                     const legendField = getLegendField(features, propertiesMeta);
                                     const importColor = Boolean(propertiesMeta?.importColors);
                                     const colorMap = propertiesMeta?.colorMap || {};
@@ -427,38 +427,41 @@
                                         return 'Unknown';
                                     }
 
+                                    // Assign a single color per unique label (combines duplicates)
                                     features.forEach(f => {
                                         const label = getLabel(f);
+                                        if (labelToColor[label]) return;
 
-                                        if (importColor) {
-                                            const color = f.properties.color || '#3388ff';
-                                            if (!legendMap[color]) {
-                                                legendMap[color] = label;
-                                            }
-                                            return;
-                                        }
-
-                                        const color = colorMap[label] || defaultLegendPalette{{ $widget['random_id'] }}[paletteIndex % defaultLegendPalette{{ $widget['random_id'] }}.length];
-                                        if (!legendMap[color]) {
-                                            legendMap[color] = label;
+                                        if (importColor && f.properties && f.properties.color) {
+                                            labelToColor[label] = f.properties.color;
+                                        } else {
+                                            labelToColor[label] = colorMap[label] || defaultLegendPalette{{ $widget['random_id'] }}[paletteIndex % defaultLegendPalette{{ $widget['random_id'] }}.length];
                                             paletteIndex += 1;
                                         }
-                                    }); 
+                                    });
 
-                                    return legendMap;
+                                    // Build legend map keyed by color. If multiple labels share a color combine them
+                                    const legendMap = {};
+                                    Object.entries(labelToColor).forEach(([label, color]) => {
+                                        if (legendMap[color]) {
+                                            if (!legendMap[color].includes(label)) {
+                                                legendMap[color] = legendMap[color] + ', ' + label;
+                                            }
+                                        } else {
+                                            legendMap[color] = label;
+                                        }
+                                    });
+
+                                    return { legendMap, labelToColor };
                                 }
 
-                                function renderLegend(legendMap) {
+                                function renderLegend(legendObj) {
+                                    const legendMap = legendObj.legendMap || legendObj;
                                     let html = "<b>Legend</b><br>";
 
                                     Object.entries(legendMap).forEach(([color, label]) => {
-                                        html += `
-                                            <div style="display:flex; align-items:center; margin-bottom:4px;">
-                                                <span style="width:12px;height:12px;background:${color};display:inline-block;margin-right:6px;"></span>
-                                                ${label}
-                                            </div>
-                                        `;
-                                    });  
+                                        html += `\n<div style="display:flex; align-items:center; margin-bottom:4px;">\n                                                <span style="width:12px;height:12px;background:${color};display:inline-block;margin-right:6px;"></span>\n                                                ${label}\n                                            </div>\n                                        `;
+                                    });
 
                                     return html;
                                 }
@@ -585,15 +588,47 @@
                                             }
                                     });
 
-                                    const legendData = buildLegend(
+                                    const legendResult = buildLegend(
                                         features,
                                         propertiesMeta{{ $widget['random_id'] }}
                                     );
 
-                                    const legendHtml = renderLegend(legendData);
+                                    const legendHtml = renderLegend(legendResult);
 
                                     // Target this map's legend specifically
                                     document.querySelector(".legend-{{ $widget['random_id'] }}").innerHTML = legendHtml;
+
+                                    // Apply the same colors to map layers so geometry matches legend
+                                    const labelToColor = legendResult.labelToColor || {};
+                                    const legendField = getLegendField(features, propertiesMeta{{ $widget['random_id'] }});
+
+                                    {{ pathinfo($widget['filename'], PATHINFO_FILENAME); }}{{ $widget['random_id'] }}.eachLayer(function (layer) {
+                                        if (!layer.feature) return;
+
+                                        const props = layer.feature.properties || {};
+                                        const label = (legendField && props[legendField] !== undefined && props[legendField] !== null && props[legendField] !== '')
+                                            ? String(props[legendField])
+                                            : 'Unknown';
+
+                                        let color;
+                                        if (Boolean(propertiesMeta{{ $widget['random_id'] }}?.importColors)) {
+                                            color = props.color || '#3388ff';
+                                        } else {
+                                            color = (propertiesMeta{{ $widget['random_id'] }}?.colorMap && propertiesMeta{{ $widget['random_id'] }}.colorMap[label])
+                                                || labelToColor[label]
+                                                || defaultLegendPalette{{ $widget['random_id'] }}[0];
+                                        }
+
+                                        if (layer.setStyle) {
+                                            layer.setStyle({
+                                                color: color,
+                                                fillColor: color,
+                                                weight: 1,
+                                                fillOpacity: 0.8,
+                                                opacity: 1
+                                            });
+                                        }
+                                    });
 
                                     broadcastBBox();
                                     mapDataLoaded{{ $widget['random_id'] }} = true;
