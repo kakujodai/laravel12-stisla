@@ -47,6 +47,36 @@
                                     <button class="btn btn-warning" type="submit">Save and Exit</button>
                                 </div>
                             </form>
+                            <form action="{{ route('profile.edit-widgets', ['dash_id' => $dashboard_info['id'], 'id' => $widget['id']]) }}" method="POST">
+                                @csrf
+                                <div class="form-group">
+                                    <label for="legend_property">Legend Property</label>
+                                        <select class="form-control mb-2" id="legend_property" name="legend_property">
+                                            <option value="">Loading...</option>
+                                        </select>
+
+                                    <div id="map_popup_group" class="form-group">
+                                            <label for="map_tooltip">Select which properties to show on popups</label>
+                                                <select id="map_tooltip" name="map_tooltip[]" class="form-control mb-2" multiple style="width:100%;">
+                                                </select>
+
+                                            <label for="popup_event">Popup trigger</label>
+                                                <select id="popup_event" name="popup_event" class="form-control mb-2">
+                                                    <option value="click">On click</option>
+                                                    <option value="hover">On hover</option>
+                                                    <option value="both">On click + hover</option>
+                                                </select>
+
+                                        <div id="popup_template_group" style="display:none;">
+                                            <label for="popup_template">Custom popup template</label>
+                                            <textarea
+                                                id="popup_template" name="popup_template" class="form-control mb-2" rows="4">{{ $metadata['popup_template'] ?? '' }}</textarea>
+                                        </div>
+                                    </div>
+
+                                    <button class="btn btn-warning" type="submit">Save and Exit</button>
+                                </div>
+                            </form>
                         </div>
                     </div>
                 </div>
@@ -131,6 +161,57 @@
             // graph options
             $("#graphAll").show(0);
             // just had the for loop be in the html, nobody can tell me what to do!
+        }
+        //Update legend stuff
+        function update_legend_select(filename) {
+            $.post('/profile/get-file-metadata', { filename }).done(function (response) {
+                const $sel = $('#legend_property');
+                const current = @json($metadata['legend_property'] ?? '');
+                $sel.empty();
+                $.each(response.table_columns || [], function(_, value) {
+                    $sel.append(`<option value="${value}">${value}</option>`);
+                });
+            $sel.val(current);
+            });
+        }
+        //update popup stuff
+        function update_popup_select(filename) {
+            $.post('/profile/get-file-metadata', { filename }).done(function (response) {
+                const $sel = $('#map_tooltip');
+                const current = @json($metadata['map_tooltip'] ?? []);
+                $sel.empty();
+                $sel.append('<option value="ALL_PROPERTIES">All properties</option>');
+                $.each(response.table_columns || [], function(_, value) {
+                    $sel.append(`<option value="${value}">${value}</option>`);
+                });
+                $sel.append('<option value="custom">Custom popup...</option>');
+                $sel.val(Array.isArray(current) ? current : [current]).trigger('change');
+            });
+        }
+        //initialize select2 for multiple select elements before populating
+        $('#map_tooltip').select2({
+            placeholder: 'Select popup properties',
+            closeOnSelect: false,
+            allowClear: true
+        });
+        //popup custom show/hide
+        $('#map_tooltip').on('change', function () {
+            const values = $(this).val() || [];
+            if (values.includes('custom')) {
+                $('#popup_template_group').show('slow');
+            }
+            else {
+                $('#popup_template_group').hide('slow');
+            }
+        });
+        //load map widget's geojson properties
+        if (widget_type == 1) {
+            const filename = @json($widget['map_filename'] ?? $widget['filename'] ?? null);
+            if (filename) {
+                update_legend_select(filename);
+                update_popup_select(filename);
+            }
+            $('#popup_event').val(@json($metadata['popup_event'] ?? 'click'));
         }
     });
 </script>
