@@ -149,7 +149,11 @@
         $("#mapAll").hide(0);
         $("#lineGraph").hide(0);
         $("#graphAll").hide(0);
-        widget_type = {{$widget_type}}
+        widget_type = {{$widget_type}};
+        // Ensure AJAX posts include Laravel CSRF token
+        $.ajaxSetup({
+            headers: { 'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content') }
+        });
         if(widget_type == 1){
             // map options
             $("#mapAll").show(0);
@@ -206,7 +210,7 @@
         });
         //load map widget's geojson properties
         if (widget_type == 1) {
-            const filename = @json($widget['map_filename'] ?? $widget['filename'] ?? null);
+            const filename = @json($metadata['map_filename'] ?? $metadata['filename'] ?? null);
             if (filename) {
                 update_legend_select(filename);
                 update_popup_select(filename);
