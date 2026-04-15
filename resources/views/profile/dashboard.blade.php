@@ -306,7 +306,7 @@
                     data-widget-id="{{ $widget['id'] }}"
                     style="top: {{ $top }}px; left: {{ $left }}px; width: {{ $width }}px; height: {{ $height }}px;"
                 >
-                    <div class="card">
+                    <div class="card" >
                         <x-widget-header
                             :name="$widget['name']"
                             :widget-id="$widget['id']"
@@ -545,7 +545,7 @@
                                     }));
                                 }
 
-                                var debouncedBroadcast{{ $widget['random_id'] }} = debounce(broadcastBBox, 200);
+                                const debouncedBroadcast{{ $widget['random_id'] }} = debounce(broadcastBBox, 200);
                                 let mapDataLoaded{{ $widget['random_id'] }} = false;
 
                                 map{{ $widget['random_id'] }}.on('moveend zoomend', () => {
@@ -675,6 +675,9 @@
                                             }
                                         });
                                 }
+
+                                // makes linked graphs update on page load instead of only on map movement.
+                                window.onload = debouncedBroadcast{{ $widget['random_id'] }}();;
                             </script>
                         </div>
                     </div>
