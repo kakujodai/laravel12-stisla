@@ -176,7 +176,7 @@ class DashboardController extends Controller
                     }
                     else{
                         $datasets = [[
-                            'label' => $labels,
+                            'label' => $decode_metadata['x_axis'] ?? '',
                             'data'  => $values,
                             'fill'  => true,
                             'pointRadius' => 0,
@@ -194,7 +194,9 @@ class DashboardController extends Controller
                         ->options([
                             "interaction" => ["mode" => "nearest", "intersect" => false],
                             "hover" => ["mode" => "nearest", "intersect" => false],
-                            "plugins" => ["legend" => ["position" => $label_location]],
+                            "plugins" => ["legend" => [
+                                "display" => ((int)$get_widget['widget_type_id']==3 ? false : true), # legend for bar chart won't work as intended
+                                "position" => $label_location]],
                             "responsive" => true,
                             "maintainAspectRatio" => false,
                         ]);
