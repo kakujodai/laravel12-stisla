@@ -58,15 +58,15 @@ class DashboardController extends Controller
                     $get_widget['filename'] = preg_replace('/[^A-Za-z0-9\_\.]/', '', basename($get_map_filename));
                 }
 
-                $get_widget['importColor'] = !empty($decode_metadata['importColors']);
+                $get_widget['importColor'] = array_key_exists('importColors',$decode_metadata) ? $decode_metadata['importColors'] : 0;
             }
 
             //table widgets
             elseif ($get_widget['widget_type_id'] == 5) {
                 if (array_key_exists('importColors', $decode_metadata) && $decode_metadata['importColors']) {
-                    $get_widget['importColor'] = true;
+                    $get_widget['importColor'] = $decode_metadata['importColors'];
                 } else {
-                    $get_widget['importColor'] = false;
+                    $get_widget['importColor'] = 0;
                 }
                 $get_widget['properties_metadata'] = [
                     'importColor' => $get_widget['importColor'],
@@ -579,11 +579,11 @@ class DashboardController extends Controller
             // Ensure metadata is an array
             if (!is_array($metadata)) $metadata = (array) $metadata;
 
-            // importColors checkbox
-            if ($request->has('importColors')) {
-                $metadata['importColors'] = true;
+            // importColors options
+            if ($request->has('mapColors')) {
+                $metadata['importColors'] = $request->input('mapColors');
             } else {
-                $metadata['importColors'] = false;
+                $metadata['importColors'] = 0;
             }
 
             // legend property (if present)

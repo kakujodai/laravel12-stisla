@@ -28,7 +28,7 @@ return new class extends Migration
      * y-axis
      * x-axis
      * mapLinkID: stores the widget ID of the map we point to
-     * importColors: boolean of whether to import geojson colors
+     * importColors: option list of how to render colors [none=>0, import=>1, legend=>2]
      * colorMap[$label] => color hex code
      * widgetData[] stores misc widget data
      *      - widgetData['mapColorRules'][rule#] => $rule
