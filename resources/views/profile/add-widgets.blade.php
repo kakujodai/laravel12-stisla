@@ -237,6 +237,43 @@
 @push('scripts')
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+    <script src="https://unpkg.com/dompurify@2.4.0/dist/purify.min.js"></script>
+
+    <script>
+        // Popup sanitization helpers — use DOMPurify to sanitize templates and always
+        // escape substituted property values to prevent XSS.
+        function escapeHtml(str) {
+            return $('<div>').text(str == null ? '' : String(str)).html();
+        }
+
+        function buildSafePopupHtml(template, properties) {
+            const allowedTags = ['b','i','strong','em','br','p','ul','ol','li','a','span','div'];
+            const allowedAttrs = ['href','title','target'];
+            const cfg = {
+                ALLOWED_TAGS: allowedTags,
+                ALLOWED_ATTR: allowedAttrs,
+                FORBID_ATTR: ['style', 'onclick', 'onerror', 'onload']
+            };
+
+            // First sanitize the raw template (limits tags/attrs)
+            const safeTemplate = DOMPurify.sanitize(template || '', cfg);
+
+            // Replace placeholders with escaped values
+            const substituted = safeTemplate.replace(/\{([^}]+)\}/g, function(_, key) {
+                const val = properties && properties[key] != null ? properties[key] : '';
+                return escapeHtml(String(val));
+            });
+
+            // Final sanitize to ensure no unsafe attributes slipped through
+            return DOMPurify.sanitize(substituted, cfg);
+        }
+
+        // Example usage (uncomment to enable a live preview element with id "map_popup_preview"):
+        // $('#map_popup').on('input', function () {
+        //     const html = buildSafePopupHtml($(this).val(), {});
+        //     $('#map_popup_preview').html(html);
+        // });
+    </script>
 
     <script>
         document.addEventListener('DOMContentLoaded', function () {
@@ -283,20 +320,44 @@
             }
 
         function update_legend_select(filename) {
-            $.post('/profile/get-file-metadata', { filename }).done(function (response) {
-                const $sel = $('#legend_property');
-                const current = $sel.val() || '';
+            $.post('/profile/get-file-metadata', { filename })
+                .done(function (response) {
+                    try {
+                        const $sel = $('#legend_property');
+                        const current = $sel.val() || '';
 
-                $sel.empty();
+                        $sel.empty();
 
-                $.each(response.table_columns || [], function(_, value) {
-                    $sel.append(`<option value="${value}">${value}</option>`);
+                        // Add a blank/default option so users can choose "auto detect" (saved as null)
+                        $sel.append($('<option>').val('').text('-- auto detect --'));
+
+                        const cols = Array.isArray(response && response.table_columns)
+                            ? response.table_columns
+                            : [];
+
+                        if (!Array.isArray(response && response.table_columns)) {
+                            console.warn('update_legend_select: expected response.table_columns to be an array', response);
+                        }
+
+                        // use DOM methods to avoid inserting unescaped HTML
+                        $.each(cols, function(_, value) {
+                            $sel.append($('<option>').val(value).text(value));
+                        });
+
+                        if (current && $sel.find(`option[value="${current}"]`).length) {
+                            $sel.val(current);
+                        } else if (!current) {
+                            // if there was no previous selection, keep the blank/default
+                            $sel.val('');
+                        }
+                        $sel.trigger('change');
+                    } catch (err) {
+                        console.error('update_legend_select error:', err);
+                    }
+                })
+                .fail(function (jqXHR, textStatus, errorThrown) {
+                    console.error('Failed to fetch file metadata for legend:', textStatus, errorThrown);
                 });
-
-                if ($sel.find(`option[value="${current}"]`).length) {
-                    $sel.val(current);
-                }
-            });
         }
 
         // Populate popup options and toggle custom template UI
