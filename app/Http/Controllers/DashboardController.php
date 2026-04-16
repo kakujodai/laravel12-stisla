@@ -254,61 +254,59 @@ class DashboardController extends Controller
             // max & min needs to be tested and fixed properly
         */
         $newDataset = array();
+        // initialize our return values
+        foreach($inputs as $key)
+            $newDataset[$key] = null;
 
-        if($calculation == "average")
-            foreach($inputs as $key){
-                // for each of the collumns
-                $count = 0;
-                $average = 0;
-                foreach($dataset as $tuple){
-                    $val = $tuple['properties'][$key] ?? null;
-                    if($val === null) continue;
-                    $count++;//only increasing count here for accurate averages
-                    $average+=$val;
+        if($calculation == "average"){
+            // need count of non-null rows
+            $count = array();
+            foreach($inputs as $key)
+                $count[$key] = 0;
+
+            foreach($dataset as $tuple){
+                foreach($newDataset as $key => $value){
+                    $val = $tuple['properties'][$key] ?? null; // get our value from tuple
+                    if($val === null) continue; // null value we move on
+                    $count[$key]++;//only increase count after checking for null
+                    $newDataset[$key]+=$val;
                 }
-                $newDataset[$key] = (double)($average / $count);
             }
+            foreach($newDataset as $key => $value){
+                $newDataset[$key] = (double)($value / $count[$key]);
+            }
+        }
         else if ($calculation == "summation")
-            foreach($inputs as $key){
-                $sum = 0;
-                foreach($dataset as $tuple){
+            foreach($dataset as $tuple)
+                foreach($inputs as $key){
                     $val = $tuple['properties'][$key] ?? null;
                     if($val === null || !is_numeric($val)) continue;
-                    $sum+=$val;
+                    $newDataset[$key]+=$val;
                 }
-                $newDataset[$key] = $sum;
-            }
         else if ($calculation == "count")
-            foreach($inputs as $key){
-                $count = 0;
-                foreach($dataset as $tuple){
+            foreach($dataset as $tuple)
+                foreach($inputs as $key){
                     $val = $tuple['properties'][$key] ?? null;
                     if($val === null) continue;
-                    $count++;
+                    $newDataset[$key]++;
                 }
-                $newDataset[$key] = $count;
-            }
         else if ($calculation == "min")
-            foreach($inputs as $key){
-                $min = Null; // f it, just as long as something is smaller...
-                foreach($dataset as $tuple){
+            foreach($dataset as $tuple){
+                foreach($inputs as $key){
                     $val = $tuple['properties'][$key] ?? null;
                     if(is_null($val)) continue;
-                    if($val < $min || is_null($min))
-                        $min = $val;
+                    if($val < $newDataset[$key] || is_null($newDataset[$key]))
+                        $newDataset[$key] = $val;
                 }
-                $newDataset[$key] = $min;
             }
         else if ($calculation == "max")
-            foreach($inputs as $key){
-                $max = Null;
-                foreach($dataset as $tuple){
+            foreach($dataset as $tuple){
+                foreach($inputs as $key){
                     $val = $tuple['properties'][$key] ?? null;
                     if(is_null($val)) continue;
-                    if($val > $max || is_null($max))
-                        $max = $val;
+                    if($val > $newDataset[$key] || is_null($newDataset[$key]))
+                        $newDataset[$key] = $val;
                 }
-                $newDataset[$key] = $max;
             }
         // median does not work as the datasets are not sorted...
         else if ($calculation == "median") // this one isn't going to look pretty...

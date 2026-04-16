@@ -72,6 +72,7 @@
                         <form action="{{ route('profile.edit-widgets', ['dash_id' => $dashboard_info['id'], 'id' => $widget['id']]) }}" method="POST" enctype="multipart/form-data">
                             @csrf
                             <div class="form-group">
+                                <div>Graph Color Customization:</div>
                                 <?php
                                     try{
                                         echo '<input type="color" id="lineColor" name="lineColor" value="'.$metadata['graphSettings']['lineColor'].'"> ';
@@ -97,6 +98,7 @@
                         <form action="{{ route('profile.edit-widgets', ['dash_id' => $dashboard_info['id'], 'id' => $widget['id']]) }}" method="POST" enctype="multipart/form-data">
                             @csrf
                             <div class="form-group">
+                                <div>Graph Color Customization:</div>
                                 <?php
                                     try { # fails if we're loading a map lol
                                         if(array_key_exists('colorMap', $metadata))

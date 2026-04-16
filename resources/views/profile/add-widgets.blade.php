@@ -174,7 +174,7 @@
                                         <option value="count">Count</option>
                                         <option value="max">Max</option>
                                         <option value="min">Min</option>
-                                        <option value="summation">Summation</option>
+                                        <option value="summation">Sum</option>
                                     </select>
 
                                     <div id="norm_form1" class="form-group" style="display:none;">
