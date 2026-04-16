@@ -306,7 +306,7 @@
                     data-widget-id="{{ $widget['id'] }}"
                     style="top: {{ $top }}px; left: {{ $left }}px; width: {{ $width }}px; height: {{ $height }}px;"
                 >
-                    <div class="card">
+                    <div class="card" >
                         <x-widget-header
                             :name="$widget['name']"
                             :widget-id="$widget['id']"
@@ -365,9 +365,17 @@
                                 ];
 
                                 function createCircleMarker(feature, latlng) {
-                                    var thecolor = (({{$widget['importColor']+0}}) 
-                                        ? (feature.properties.color || '#00AA00') 
-                                        : '#3388ff');
+                                    var thecolor;
+                                    switch(Integer({{$widget['importColor']+0}})){
+                                        case 0:
+                                            thecolor = '#3388ff';
+                                            break;
+                                        case 1:
+                                            thecolor = (feature.properties.color || '#00AA00');
+                                            break;
+                                        case 2:
+                                            thecolor = ('#990000'); // temp in place!
+                                    }
                                     return L.circleMarker(latlng, {
                                         radius: 3,
                                         color: thecolor,
@@ -415,7 +423,7 @@
                                 function buildLegend(features, propertiesMeta) {
                                     const labelToColor = {};
                                     const legendField = getLegendField(features, propertiesMeta);
-                                    const importColor = Boolean(propertiesMeta?.importColors);
+                                    const importColor = propertiesMeta?.importColors;
                                     const colorMap = propertiesMeta?.colorMap || {};
                                     let paletteIndex = 0;
 
@@ -432,9 +440,9 @@
                                         const label = getLabel(f);
                                         if (labelToColor[label]) return;
 
-                                        if (importColor && f.properties && f.properties.color) {
+                                        if ((importColor==1) && f.properties && f.properties.color) {
                                             labelToColor[label] = f.properties.color;
-                                        } else {
+                                        } else if (importColor == 2){
                                             labelToColor[label] = colorMap[label] || defaultLegendPalette{{ $widget['random_id'] }}[paletteIndex % defaultLegendPalette{{ $widget['random_id'] }}.length];
                                             paletteIndex += 1;
                                         }
@@ -471,9 +479,23 @@
                                     new L.GeoJSON.AJAX("{{ route('profile.get-geojson', ['filename' => pathinfo($widget['filename'], PATHINFO_FILENAME)]) }}", {
                                         pointToLayer: createCircleMarker,
                                         style: function (feature) {
-                                            var theColor = (({{ $widget['importColor']+0 }})
-                                                ? (feature.properties.color || '#663399')
-                                                : '#3388ff');
+                                            var theColor;
+                                            switch({{$widget['importColor']+0}}){
+                                                case 0:
+                                                    theColor = '#3388ff';
+                                                    break;
+                                                case 1: 
+                                                    theColor = (feature.properties.color || '#AAAA00');
+                                                    break;
+                                                case 2:
+                                                    theColor = '#AAAAAA';
+                                                    //theColor = propertiesMeta{{ $widget['random_id'] }}?.colorMap[getLegendField(feature, propertiesMeta)];
+                                                    /*
+                                                        color = (propertiesMeta{{ $widget['random_id'] }}?.colorMap && propertiesMeta{{ $widget['random_id'] }}.colorMap[label])
+                                                    || labelToColor[label]
+                                                    || defaultLegendPalette{{ $widget['random_id'] }}[0];
+                                                    */
+                                            }
                                             return {
                                                 color: theColor,
                                                 fillColor: theColor,
@@ -545,7 +567,7 @@
                                     }));
                                 }
 
-                                var debouncedBroadcast{{ $widget['random_id'] }} = debounce(broadcastBBox, 200);
+                                const debouncedBroadcast{{ $widget['random_id'] }} = debounce(broadcastBBox, 200);
                                 let mapDataLoaded{{ $widget['random_id'] }} = false;
 
                                 map{{ $widget['random_id'] }}.on('moveend zoomend', () => {
@@ -610,15 +632,19 @@
                                             ? String(props[legendField])
                                             : 'Unknown';
 
-                                        let color;
-                                        if (Boolean(propertiesMeta{{ $widget['random_id'] }}?.importColors)) {
-                                            color = props.color || '#3388ff';
-                                        } else {
-                                            color = (propertiesMeta{{ $widget['random_id'] }}?.colorMap && propertiesMeta{{ $widget['random_id'] }}.colorMap[label])
+                                        let color = '#AA00AA'; // fails and we'll see!
+                                        switch({{$widget['importColor']+0}}){
+                                            case 0:
+                                                color = '#3388ff';
+                                                break;
+                                            case 1:
+                                                color = props.color || '#990099';
+                                                break;
+                                            case 2:
+                                                color = (propertiesMeta{{ $widget['random_id'] }}?.colorMap && propertiesMeta{{ $widget['random_id'] }}.colorMap[label])
                                                 || labelToColor[label]
                                                 || defaultLegendPalette{{ $widget['random_id'] }}[0];
                                         }
-
                                         if (layer.setStyle) {
                                             layer.setStyle({
                                                 color: color,
@@ -675,6 +701,9 @@
                                             }
                                         });
                                 }
+
+                                // makes linked graphs update on page load instead of only on map movement.
+                                window.onload = debouncedBroadcast{{ $widget['random_id'] }}();;
                             </script>
                         </div>
                     </div>

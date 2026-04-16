@@ -174,7 +174,7 @@
                                         <option value="count">Count</option>
                                         <option value="max">Max</option>
                                         <option value="min">Min</option>
-                                        <option value="summation">Summation</option>
+                                        <option value="summation">Sum</option>
                                     </select>
 
                                     <div id="norm_form1" class="form-group" style="display:none;">
@@ -410,22 +410,21 @@
 
         $('#widget_type').on('change', function () {
             const t = $(this).val();
+            // hide everything, then reveal only what we want.
+            $("#map_forms").hide(0);
+            $("#chart_forms").hide(0);
+            $("#table_column").hide(0);
             if (t == 1) { // map
-                $("#chart_forms").hide('slow');
-                $("#table_column").hide('slow');
                 $("#map_forms").show('slow');
                 $("#map_popup_group").show('slow');
                 // populate legend & popup selects for the currently chosen file
                 update_legend_select($('#map_filename').val());
                 update_popup_select($('#map_filename').val());
             } else if (t == 5) { // table
-                $("#chart_forms").hide('slow');
                 $("#table_column").show('slow');
                 update_table_select($('#map_filename').val());
             } else { // charts
-                $("#table_column").hide('slow');
                 $("#chart_forms").show('slow');
-                $("#norm_form").hide('slow');
                 update_axis_select($('#map_filename').val());
             }
         });

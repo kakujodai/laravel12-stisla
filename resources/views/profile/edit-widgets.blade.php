@@ -40,10 +40,25 @@
                             <form action="{{ route('profile.edit-widgets', ['dash_id' => $dashboard_info['id'], 'id' => $widget['id']]) }}" method="POST" enctype="multipart/form-data">
                                 @csrf
                                 <div class="form-group">
-                                    <label for="importColors">Map reads 'color' property in geojson. Changes the default color from a blue to a purple.</label>
-                                    <input type="checkbox" id="importColors" name="importColors" value="importColors">
-                                    <label for="importColors">Import geojson colors</label><br>
-                                    Enabling can affect load times, depending on the size of the geojson.<br><br>
+                                    <label for="mapColors">Map Color Options:</label>
+                                    <select id="mapColors" name="mapColors">
+                                        <?php
+                                            try{
+                                                if(array_key_exists('importColors', $metadata))
+                                                    $color = $metadata['importColors'];
+                                                else
+                                                    $color = 0;
+                                                // 0 for none, 1 for geojson, 2 for legend
+                                                echo("<option value='0'".($color==0 ? " selected" : " ").">Default Map Color</option>");
+                                                echo("<option value='1'".($color==1 ? " selected" : " ").">Import 'Color' fields from Geojson</option>");
+                                                echo("<option value='2'".($color==2 ? " selected" : " ").">Custom Legend Colors</option>");
+                                            }
+                                            catch(Exception $E){
+                                                echo("Failed to load in map color options: ".E);
+                                            }
+                                        ?>
+                                    </select>
+                                    <label for='mapColors'> Importing from Geojson changes default color to purple.</label>
                                     <button class="btn btn-warning" type="submit">Save and Exit</button>
                                 </div>
                             </form>
@@ -57,6 +72,7 @@
                         <form action="{{ route('profile.edit-widgets', ['dash_id' => $dashboard_info['id'], 'id' => $widget['id']]) }}" method="POST" enctype="multipart/form-data">
                             @csrf
                             <div class="form-group">
+                                <div>Graph Color Customization:</div>
                                 <?php
                                     try{
                                         echo '<input type="color" id="lineColor" name="lineColor" value="'.$metadata['graphSettings']['lineColor'].'"> ';
@@ -82,6 +98,7 @@
                         <form action="{{ route('profile.edit-widgets', ['dash_id' => $dashboard_info['id'], 'id' => $widget['id']]) }}" method="POST" enctype="multipart/form-data">
                             @csrf
                             <div class="form-group">
+                                <div>Graph Color Customization:</div>
                                 <?php
                                     try { # fails if we're loading a map lol
                                         if(array_key_exists('colorMap', $metadata))
