@@ -85,7 +85,7 @@
                 </div>
                 <div id="lineGraph">
                     <div class="card-header">Edit Graph Widget</div>
-                        <div class="card-body">
+                    <div class="card-body">
                         <div id="colorList">
                         <form action="{{ route('profile.edit-widgets', ['dash_id' => $dashboard_info['id'], 'id' => $widget['id']]) }}" method="POST" enctype="multipart/form-data">
                             @csrf
@@ -106,12 +106,11 @@
                         <button class="btn btn-warning" type="submit">Save and Exit</button>
                         </form>
                         </div>
-                        </div>
                     </div>
                 </div>
-                <div id = "graphAll">
+                <div id = "nonLineGraph">
                     <div class="card-header">Edit Graph Widget</div>
-                        <div class="card-body">
+                    <div class="card-body">
                         <div id="colorList">
                         <form action="{{ route('profile.edit-widgets', ['dash_id' => $dashboard_info['id'], 'id' => $widget['id']]) }}" method="POST" enctype="multipart/form-data">
                             @csrf
@@ -153,22 +152,26 @@
         // replace the 'slow' with 0 once done
         $("#mapAll").hide(0);
         $("#lineGraph").hide(0);
-        $("#graphAll").hide(0);
+        $("#nonLineGraph").hide(0);
         widget_type = {{$widget_type}}
         if(widget_type == 1){
             // map options
             $("#mapAll").show(0);
             if($('#mapColors').val() != 3)
                 $('#linkSelect').hide(0)
+            else
+                $('#linkSelect').show(0)
             if($('#mapColors').val() != 1)
                 $('#geoWarning').hide()
+            else
+                $('#geoWarning').show()
         }
         else if(widget_type == 2){ // Line Graphs
             $("#lineGraph").show(0);
         }
         else if(widget_type > 2 && widget_type < 5){
             // graph options
-            $("#graphAll").show(0);
+            $("#nonLineGraph").show(0);
             // just had the for loop be in the html, nobody can tell me what to do!
         }
     });
