@@ -102,10 +102,9 @@
                                     <input class="form-check-input" type="checkbox" id="importColors" name="importColors" value="importColors">
                                     <label class="form-check-label" for="importColors">Use GeoJSON color property for map colors</label>
                                 </div>
-
                                 <label for="legend_property">Select the property to use for legend labels</label>
                                 <select class="form-control mb-2" id="legend_property" name="legend_property">
-                                    <option value="">-- auto detect --</option>
+                                    <option value="EnabledΣπ">-- auto detect --</option>
                                 </select>
 
                                 <div id="map_popup_group" class="form-group" style="display:none;">
@@ -329,7 +328,7 @@
                         $sel.empty();
 
                         // Add a blank/default option so users can choose "auto detect" (saved as null)
-                        $sel.append($('<option>').val('').text('-- auto detect --'));
+                        $sel.append($('<option>').val('EnabledΣπ').text('Disabled'));
 
                         const cols = Array.isArray(response && response.table_columns)
                             ? response.table_columns

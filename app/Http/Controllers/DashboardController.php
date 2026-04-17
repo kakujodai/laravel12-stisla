@@ -500,8 +500,10 @@ class DashboardController extends Controller
         if ((int)$request->widget_type === 1) {
             $metadata = [
                 'map_filename' => $request->map_filename,
-                'importColors' => $request->has('importColors'),
-                'legend' => [ 'property' => $request->input('legend_property') ?: null ],
+                'importColors' => ($request->input('legend_property') == "EnabledΣπ") ? (($request->has('importColors')) ? $request->input('importColors') : 0) : 2, // unholy amalgamation of hell. if the legend is enabled then we auto-select the legend option, otherwise default to what we're given or 0
+                'legend' => [ 
+                    'enabled' => ($request->input('legend_property') == "EnabledΣπ") ? false : true,
+                    'property' => $request->input('legend_property') ?: null ],
                 'map_tooltip' => $request->input('map_tooltip') ?: null,
                 'popup_template' => $request->input('popup_template') ?: '',
                 'popup_event' => $request->input('popup_event') ?: 'click',
@@ -603,7 +605,12 @@ class DashboardController extends Controller
 
             // legend property (if present)
             if ($request->has('legend_property')) {
-                $metadata['legend'] = [ 'property' => $request->input('legend_property') ?: null ];
+                if($request->input('legend_property') == "EnabledΣπ")
+                    $metadata['enabled'] = false;
+                else{
+                    $metadata['enabled'] = true;
+                    $metadata['legend'] = [ 'property' => $request->input('legend_property') ?: null ];
+                }
             }
 
             // popup / tooltip settings

@@ -371,7 +371,7 @@
                                             thecolor = '#3388ff';
                                             break;
                                         case 1:
-                                            thecolor = (feature.properties.color || '#00AA00');
+                                            thecolor = (feature.properties.color || '#990099');
                                             break;
                                         case 2:
                                             thecolor = ('#990000'); // temp in place!
@@ -495,13 +495,14 @@
                                                     theColor = '#3388ff';
                                                     break;
                                                 case 1: 
-                                                    theColor = (feature.properties.color || '#AAAA00');
+                                                    theColor = (feature.properties.color || '#990099');
                                                     break;
                                                 case 2:
                                                     theColor = '#AAAAAA'; // doesn't matter? nice!
                                                     break;
                                                 case 3:
-                                                    thecolor = '#AAAA00'; // doesn't impact anything...
+                                                    const colorMap = @json($widget['colorMap']);
+                                                    theColor = colorMap[feature.properties["{{$widget['colorKey']}}"]];
                                             }
                                             return {
                                                 color: theColor,
@@ -627,8 +628,7 @@
                                     const legendHtml = renderLegend(legendResult);
 
                                     // Target this map's legend specifically
-                                    if(legendHTML)
-                                        document.querySelector(".legend-{{ $widget['random_id'] }}").innerHTML = legendHtml;
+                                    document.querySelector(".legend-{{ $widget['random_id'] }}").innerHTML = legendHtml;
 
                                     // Apply the same colors to map layers so geometry matches legend
                                     const labelToColor = legendResult.labelToColor || {};
