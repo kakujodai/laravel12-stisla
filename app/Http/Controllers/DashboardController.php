@@ -557,12 +557,13 @@ class DashboardController extends Controller
         $widgets = DashboardWidget::where('dashboard_id', $dash_id)->get();
         $my_files = FileUpload::select('filename', 'title')->where('user_id', Auth::id())->get();
         $mapWidgetList = [];
-        $graphWidgetList = [];
+        $graphWidgetList = []; // only non-normalized ones!!
         foreach ($widgets as $widget) {
             if ($widget->widget_type_id == 1) 
                 $mapWidgetList[$widget->id] = $widget->name;
             else if ($widget->widget_type_id < 5) 
-                $graphWidgetList[$widget->id] = $widget->name;
+                if(json_decode($widget['metadata'], true)['norm'] == 'NOPE') // bit messy but it works
+                    $graphWidgetList[$widget->id] = $widget->name;
             if ($widget->id == $id) $chosenOne = $widget;
         }
         $metadata = json_decode($chosenOne->metadata, true);

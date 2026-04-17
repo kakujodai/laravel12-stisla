@@ -27,6 +27,7 @@ return new class extends Migration
      * map_filename
      * y_axis
      * x_axis
+     * norm: normalization. default is "NOPE"
      * mapLinkID: stores the widget ID of the map/graph we point to
      * importColors: int of how to render colors [none=>0, import=>1, legend=>2, graph=>3]
      * colorMap[$label] => color hex code
