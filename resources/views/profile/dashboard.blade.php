@@ -375,6 +375,9 @@
                                             break;
                                         case 2:
                                             thecolor = ('#990000'); // temp in place!
+                                            break;
+                                        case 3:
+                                            thecolor = ('#000099');
                                     }
                                     return L.circleMarker(latlng, {
                                         radius: 3,
@@ -386,9 +389,13 @@
                                 
                                 //Legend Helper Functions
                                 function getLegendField(features, propertiesMeta) {
+                                    if ("{{$widget['colorKey']}}" && propertiesMeta['importColors'] == 3){
+                                        return "{{$widget['colorKey']}}";
+                                    }
                                     if (propertiesMeta?.legend?.property) {
                                         return propertiesMeta.legend.property;
                                     }
+                                    
 
                                     if (propertiesMeta?.x_axis && propertiesMeta.x_axis.length > 0) {
                                             const candidate = propertiesMeta.x_axis.find(field =>
@@ -424,7 +431,7 @@
                                     const labelToColor = {};
                                     const legendField = getLegendField(features, propertiesMeta);
                                     const importColor = propertiesMeta?.importColors;
-                                    const colorMap = propertiesMeta?.colorMap || {};
+                                    const colorMap = propertiesMeta?.colorMap || @json($widget['colorMap']) || {};
                                     let paletteIndex = 0;
 
                                     function getLabel(feature) {
@@ -442,7 +449,7 @@
 
                                         if ((importColor==1) && f.properties && f.properties.color) {
                                             labelToColor[label] = f.properties.color;
-                                        } else if (importColor == 2){
+                                        } else if (importColor == 2 || importColor == 3){
                                             labelToColor[label] = colorMap[label] || defaultLegendPalette{{ $widget['random_id'] }}[paletteIndex % defaultLegendPalette{{ $widget['random_id'] }}.length];
                                             paletteIndex += 1;
                                         }
@@ -464,14 +471,17 @@
                                 }
 
                                 function renderLegend(legendObj) {
-                                    const legendMap = legendObj.legendMap || legendObj;
-                                    let html = "<b>Legend</b><br>";
+                                    if(legendObj){
+                                        const legendMap = legendObj.legendMap || legendObj;
+                                        let html = "<b>Legend</b><br>";
 
-                                    Object.entries(legendMap).forEach(([color, label]) => {
-                                        html += `\n<div style="display:flex; align-items:center; margin-bottom:4px;">\n                                                <span style="width:12px;height:12px;background:${color};display:inline-block;margin-right:6px;"></span>\n                                                ${label}\n                                            </div>\n                                        `;
-                                    });
-
+                                        Object.entries(legendMap).forEach(([color, label]) => {
+                                            html += `\n<div style="display:flex; align-items:center; margin-bottom:4px;">\n                                                <span style="width:12px;height:12px;background:${color};display:inline-block;margin-right:6px;"></span>\n                                                ${label}\n                                            </div>\n                                        `;
+                                        });
+                                        
                                     return html;
+                                    }
+                                    return 0;
                                 }
 
 
@@ -488,13 +498,10 @@
                                                     theColor = (feature.properties.color || '#AAAA00');
                                                     break;
                                                 case 2:
-                                                    theColor = '#AAAAAA';
-                                                    //theColor = propertiesMeta{{ $widget['random_id'] }}?.colorMap[getLegendField(feature, propertiesMeta)];
-                                                    /*
-                                                        color = (propertiesMeta{{ $widget['random_id'] }}?.colorMap && propertiesMeta{{ $widget['random_id'] }}.colorMap[label])
-                                                    || labelToColor[label]
-                                                    || defaultLegendPalette{{ $widget['random_id'] }}[0];
-                                                    */
+                                                    theColor = '#AAAAAA'; // doesn't matter? nice!
+                                                    break;
+                                                case 3:
+                                                    thecolor = '#AAAA00'; // doesn't impact anything...
                                             }
                                             return {
                                                 color: theColor,
@@ -540,7 +547,9 @@
                                     return div;
                                 };
 
-                                legend{{ $widget['random_id'] }}.addTo(map{{ $widget['random_id'] }});
+                                // enable or disable the legend!
+                                if((propertiesMeta{{ $widget['random_id'] }}?.legend.enabled || 0))
+                                    legend{{ $widget['random_id'] }}.addTo(map{{ $widget['random_id'] }});
 
                                 const viewKey{{ $widget['random_id'] }} = 'mapview:dash{{ $dashboard_info["id"] }}:widget{{ $widget["id"] }}';
 
@@ -618,7 +627,8 @@
                                     const legendHtml = renderLegend(legendResult);
 
                                     // Target this map's legend specifically
-                                    document.querySelector(".legend-{{ $widget['random_id'] }}").innerHTML = legendHtml;
+                                    if(legendHTML)
+                                        document.querySelector(".legend-{{ $widget['random_id'] }}").innerHTML = legendHtml;
 
                                     // Apply the same colors to map layers so geometry matches legend
                                     const labelToColor = legendResult.labelToColor || {};
@@ -644,6 +654,10 @@
                                                 color = (propertiesMeta{{ $widget['random_id'] }}?.colorMap && propertiesMeta{{ $widget['random_id'] }}.colorMap[label])
                                                 || labelToColor[label]
                                                 || defaultLegendPalette{{ $widget['random_id'] }}[0];
+                                                break;
+                                            case 3:
+                                                const colorMap = @json($widget['colorMap']);
+                                                color = colorMap[props["{{$widget['colorKey']}}"]];                                                
                                         }
                                         if (layer.setStyle) {
                                             layer.setStyle({

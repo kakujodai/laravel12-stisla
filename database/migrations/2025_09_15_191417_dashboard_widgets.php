@@ -25,10 +25,10 @@ return new class extends Migration
     /**
      * metadata array contents:
      * map_filename
-     * y-axis
-     * x-axis
-     * mapLinkID: stores the widget ID of the map we point to
-     * importColors: option list of how to render colors [none=>0, import=>1, legend=>2]
+     * y_axis
+     * x_axis
+     * mapLinkID: stores the widget ID of the map/graph we point to
+     * importColors: int of how to render colors [none=>0, import=>1, legend=>2, graph=>3]
      * colorMap[$label] => color hex code
      * widgetData[] stores misc widget data
      *      - widgetData['mapColorRules'][rule#] => $rule

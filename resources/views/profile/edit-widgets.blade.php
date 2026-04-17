@@ -52,14 +52,32 @@
                                                 echo("<option value='0'".($color==0 ? " selected" : " ").">Default Map Color</option>");
                                                 echo("<option value='1'".($color==1 ? " selected" : " ").">Import 'Color' fields from Geojson</option>");
                                                 echo("<option value='2'".($color==2 ? " selected" : " ").">Custom Legend Colors</option>");
+                                                echo("<option value='3'".($color==3 ? " selected" : " ").">Import from Graph Widget</option>");
                                             }
                                             catch(Exception $E){
                                                 echo("Failed to load in map color options: ".E);
                                             }
                                         ?>
-                                    </select>
-                                    <label for='mapColors'> Importing from Geojson changes default color to purple.</label>
-                                    <button class="btn btn-warning" type="submit">Save and Exit</button>
+                                    </select><br>
+                                    <label for="mapColors" id='geoWarning'> Importing from Geojson changes default color to purple.</label>
+                                    <div id="linkSelect"><br>
+                                        <label for="mapLink">Choose Map to Link to:</label>
+                                        <select id="mapLink" name="mapLink">
+                                            <?php
+                                                $linkedWidget = $metadata['mapLinkID'] ?? -1;
+                                                // sucker for inline php insertion, it's bad, I know...
+                                                try{
+                                                    foreach($graphWidgets as $widgetID => $widgetName){
+                                                        echo("<option value='".$widgetID."'".(($widgetID == $linkedWidget) ? " selected" : "").">".$widgetName."</option>");
+                                                    }
+                                                }
+                                                catch(Exception $E){
+                                                    echo("Failed to load graph widget list".E);
+                                                }
+                                            ?>
+                                        </select>
+                                    </div>
+                                    <br><button class="btn btn-warning" type="submit">Save and Exit</button>
                                 </div>
                             </form>
                         </div>
@@ -140,6 +158,10 @@
         if(widget_type == 1){
             // map options
             $("#mapAll").show(0);
+            if($('#mapColors').val() != 3)
+                $('#linkSelect').hide(0)
+            if($('#mapColors').val() != 1)
+                $('#geoWarning').hide()
         }
         else if(widget_type == 2){ // Line Graphs
             $("#lineGraph").show(0);
@@ -149,6 +171,17 @@
             $("#graphAll").show(0);
             // just had the for loop be in the html, nobody can tell me what to do!
         }
+    });
+    $('#mapColors').on('change', function(){
+        if($(this).val() == 3)
+            $('#linkSelect').show('slow');
+        else
+            $('#linkSelect').hide('slow');
+        if($(this).val() == 1)
+            $('#geoWarning').show('slow');
+        else
+            $('#geoWarning').hide('slow');
+        
     });
 </script>
 @endpush

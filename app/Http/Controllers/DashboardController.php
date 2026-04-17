@@ -59,6 +59,13 @@ class DashboardController extends Controller
                 }
 
                 $get_widget['importColor'] = array_key_exists('importColors',$decode_metadata) ? $decode_metadata['importColors'] : 0;
+                
+                $linkID = $decode_metadata['mapLinkID'] ?? -1;
+                if(is_numeric($linkID) && $linkID != -1){
+                    // if we're linked to a graph then we grab its color map and the key it uses.
+                    $get_widget['colorMap'] = $this->getColorArray($linkID, "no");
+                    $get_widget['colorKey'] = json_decode((DashboardWidget::where('dashboard_id',$id)->where('id',$linkID)->get())[0]['metadata'],true)['x_axis'];
+                }
             }
 
             //table widgets
@@ -548,8 +555,12 @@ class DashboardController extends Controller
         $widgets = DashboardWidget::where('dashboard_id', $dash_id)->get();
         $my_files = FileUpload::select('filename', 'title')->where('user_id', Auth::id())->get();
         $mapWidgetList = [];
+        $graphWidgetList = [];
         foreach ($widgets as $widget) {
-            if ($widget->widget_type_id == 1) $mapWidgetList[$widget->id] = $widget->name;
+            if ($widget->widget_type_id == 1) 
+                $mapWidgetList[$widget->id] = $widget->name;
+            else if ($widget->widget_type_id < 5) 
+                $graphWidgetList[$widget->id] = $widget->name;
             if ($widget->id == $id) $chosenOne = $widget;
         }
         $metadata = json_decode($chosenOne->metadata, true);
@@ -557,6 +568,7 @@ class DashboardController extends Controller
         return view('profile.edit-widgets', [
             'dashboard_info' => $dashboard_info[0],
             'mapWidgets'     => $mapWidgetList,     // for if editing a graph widget
+            'graphWidgets'   => $graphWidgetList,   // for map-graph color linking
             'files'          => $my_files,
             'widget'         => $chosenOne,         // chosen widget to edit
             'widget_type'    => $chosenOne['widget_type_id'],
@@ -583,6 +595,11 @@ class DashboardController extends Controller
             } else {
                 $metadata['importColors'] = 0;
             }
+
+            if ($request->has('mapLink')) // not moving the color map here, will do it on show dashboard.
+                $metadata['mapLinkID'] = $request->input('mapLink');
+            else
+                $metadata['mapLinkID'] = -1;
 
             // legend property (if present)
             if ($request->has('legend_property')) {
