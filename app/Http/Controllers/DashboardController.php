@@ -18,14 +18,12 @@ class DashboardController extends Controller
     {
         $dashboardModel = Dashboard::findOrFail($dashboard);
 
-        dd('publicShow hit', $id);
-
         // Public share links are always view-only. We still load the OWNER'S
         // files/widgets, because guests do not have their own Auth::id().
         $array = $this->buildDashboardViewData($dashboardModel->id, $dashboardModel->user_id);
         $array['isOwner'] = false;
 
-        return view('profile.public-view', $array);
+        return view('profile.dashboard', $array);
     }
 
     public function show_dashboard($id)

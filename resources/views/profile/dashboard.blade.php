@@ -2,6 +2,11 @@
 
 @section('title', $dashboard_info['name'])
 
+@php
+    // View-only safety defaults. Public share links pass false from the controller.
+    $isOwner = $isOwner ?? false;
+@endphp
+
 @push('css')
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/jqueryui/1.13.2/themes/base/jquery-ui.min.css" integrity="sha512-ELV+xyi8IhEApPS/pSj66+Jiw+sOT1Mqkzlh8ExXihe4zfqbWkxPRi8wptXIO9g73FSlhmquFlUOuMSoXz5IRw==" crossorigin="anonymous" referrerpolicy="no-referrer" />
@@ -57,6 +62,17 @@
         }
 
         .dashboard-locked .ui-resizable-handle {
+            display: none !important;
+        }
+
+        /* Public/view-only safety: if a settings/menu/delete control slips through,
+           hide it when the canvas is locked for non-owners. */
+        .dashboard-locked .widget-settings,
+        .dashboard-locked .btn-widget-settings,
+        .dashboard-locked .widget-delete,
+        .dashboard-locked .delete-widget,
+        .dashboard-locked .dropdown-toggle.owner-only,
+        .dashboard-locked .owner-only {
             display: none !important;
         }
 
