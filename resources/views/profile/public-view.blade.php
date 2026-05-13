@@ -1,4 +1,4 @@
-@extends('layouts.app')
+@extends('layouts.public-dashboard')
 
 @section('title', $dashboard_info['name'])
 
@@ -493,7 +493,7 @@
 
 
                                 var {{ pathinfo($widget['filename'], PATHINFO_FILENAME) }}{{ $widget['random_id'] }} =
-                                    new L.GeoJSON.AJAX("{{ route('profile.get-geojson', ['filename' => pathinfo($widget['filename'], PATHINFO_FILENAME)]) }}", {
+                                    L.geoJSON(@json(json_decode($widget['map_json'] ?? '{}', true)), {
                                         pointToLayer: createCircleMarker,
                                         style: function (feature) {
                                             var theColor;
@@ -926,7 +926,7 @@
 													applyVisibilityFromSelected(selected);
                                             try { localStorage.setItem(storeKey, JSON.stringify(selected)); } catch(e) {}
 
-													fetch('{{ route('profile.save-widget-columns') }}', {
+													if (@json($isOwner)) fetch('{{ route('profile.save-widget-columns') }}', {
 														method: 'POST',
 														headers: {
 															'Content-Type': 'application/json',
@@ -1092,6 +1092,7 @@
 		}
 
 		window.MapBus.addEventListener('map:bbox', async (e) => {
+			if (!@json($isOwner)) return;
 			if (!chartJsReady()) return;
 
 			const { bbox } = e.detail;

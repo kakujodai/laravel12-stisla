@@ -6,6 +6,9 @@ use App\Http\Controllers\FileUploadController;
 use App\Http\Controllers\PostgresImportController;
 use App\Http\Controllers\DashboardController;
 
+Route::get('/dashboards/{id}/share', [DashboardController::class, 'publicShow'])
+    ->name('dashboard.public');
+
 Route::get('/', function () {
     return redirect()->route('home');
 });

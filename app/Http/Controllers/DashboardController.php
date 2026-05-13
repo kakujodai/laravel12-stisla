@@ -14,11 +14,38 @@ use IcehouseVentures\LaravelChartjs\Facades\Chartjs;
 
 class DashboardController extends Controller
 {
+        public function publicShow($dashboard)
+    {
+        $dashboardModel = Dashboard::findOrFail($dashboard);
+
+        dd('publicShow hit', $id);
+
+        // Public share links are always view-only. We still load the OWNER'S
+        // files/widgets, because guests do not have their own Auth::id().
+        $array = $this->buildDashboardViewData($dashboardModel->id, $dashboardModel->user_id);
+        $array['isOwner'] = false;
+
+        return view('profile.public-view', $array);
+    }
+
     public function show_dashboard($id)
     {
-        ob_start('ob_gzhandler');
         $userId = Auth::id();
 
+        // Normal dashboard route: only the owner can open/edit this version.
+        $dashboard = Dashboard::where('user_id', $userId)
+            ->where('id', $id)
+            ->firstOrFail();
+
+        $array = $this->buildDashboardViewData($dashboard->id, $userId);
+        $array['isOwner'] = true;
+
+        return view('profile.dashboard', $array);
+    }
+
+    private function buildDashboardViewData($id, $userId)
+    {
+        ob_start('ob_gzhandler');
         $my_files = FileUpload::select('filename')
             ->where('user_id', $userId)
             ->get();
@@ -230,7 +257,8 @@ class DashboardController extends Controller
             'all_geojsons'   => $geojson_array,
         ];
 
-        return view('profile.dashboard', $array);
+        return $array;
+    
     }
     private function compressDatasets($inputs, $calculation, $dataset, $toJSON){
         if(!is_array($inputs) || !is_array($dataset) || !is_string($calculation))
@@ -422,6 +450,9 @@ class DashboardController extends Controller
         $dashboard_info = Dashboard::where('user_id', Auth::id())
             ->where('id', $id)
             ->get();
+        $dashboard = $dashboard_info[0] ?? null;
+        abort_unless($dashboard, 404);
+
         $my_files = FileUpload::select('filename', 'title')->where('user_id', Auth::id())->get();
         $get_widget_types = DashboardWidgetType::get();
 
@@ -431,11 +462,14 @@ class DashboardController extends Controller
             if ($widget->widget_type_id == 1) $mapWidgetList[$widget->id] = $widget->name;
         }
 
+        $isOwner = auth()->check() && auth()->id() === $dashboard->user_id; //ROLE BASED ACCESS
+
         return view('profile.add-widgets', [
             'dashboard_info' => $dashboard_info[0],
             'widget_types'   => $get_widget_types,
             'files'          => $my_files,
             'mapWidgets'     => $mapWidgetList,
+            'isOwner'        => $isOwner,
         ]);
     }
 
