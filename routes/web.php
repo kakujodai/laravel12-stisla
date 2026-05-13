@@ -8,6 +8,8 @@ use App\Http\Controllers\DashboardController;
 
 Route::get('/dashboards/{id}/share', [DashboardController::class, 'publicShow'])
     ->name('dashboard.public');
+Route::post('/profile/dashboard/update-bounds', [DashboardController::class, 'updateBounds'])
+    ->name('dashboard.update-bounds');
 
 Route::get('/', function () {
     return redirect()->route('home');

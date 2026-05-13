@@ -14,13 +14,16 @@ use IcehouseVentures\LaravelChartjs\Facades\Chartjs;
 
 class DashboardController extends Controller
 {
-        public function publicShow($dashboard)
+    public function publicShow($dashboard)
     {
         $dashboardModel = Dashboard::findOrFail($dashboard);
 
-        // Public share links are always view-only. We still load the OWNER'S
-        // files/widgets, because guests do not have their own Auth::id().
-        $array = $this->buildDashboardViewData($dashboardModel->id, $dashboardModel->user_id);
+        $array = $this->buildDashboardViewData(
+            $dashboardModel->id,
+            $dashboardModel->user_id
+        );
+
+
         $array['isOwner'] = false;
 
         return view('profile.dashboard', $array);
@@ -48,6 +51,7 @@ class DashboardController extends Controller
             ->where('user_id', $userId)
             ->get();
 
+
         $geojson_array = [];
         foreach ($my_files as $my_file) {
             $file = $my_file['filename'];
@@ -57,8 +61,8 @@ class DashboardController extends Controller
         }
 
         $dashboard_info = Dashboard::where('user_id', $userId)
-            ->where('id', $id)
-            ->get();
+        ->where('id', $id)
+        ->firstOrFail();
 
         $get_widgets = DashboardWidget::where('dashboard_id', $id)->get();
 
@@ -79,7 +83,8 @@ class DashboardController extends Controller
                 $get_widget['map_json'] = null;
 
                 if ($get_map_filename) {
-                    $get_widget['map_json'] = Storage::get("users/{$userId}/{$get_map_filename}");
+                    $path = "users/{$userId}/{$get_map_filename}";
+                    $get_widget['map_json'] = Storage::exists($path) ? Storage::get($path) : null;
                     $get_widget['filename'] = preg_replace('/[^A-Za-z0-9\_\.]/', '', basename($get_map_filename));
                 }
 
@@ -88,13 +93,15 @@ class DashboardController extends Controller
                 $linkID = $decode_metadata['mapLinkID'] ?? -1;
                 if(is_numeric($linkID) && $linkID != -1){
                     // if we're linked to a graph then we grab its color map and the key it uses.
-                    $get_widget['colorMap'] = $this->getColorArray($linkID, "no");
+                    $get_widget['colorMap'] = $this->getColorArray($linkID, "no", $userId);
                     $get_widget['colorKey'] = json_decode((DashboardWidget::where('dashboard_id',$id)->where('id',$linkID)->get())[0]['metadata'],true)['x_axis'];
+                    
                 }
             }
 
             //table widgets
             elseif ($get_widget['widget_type_id'] == 5) {
+                
                 if (array_key_exists('importColors', $decode_metadata) && $decode_metadata['importColors']) {
                     $get_widget['importColor'] = $decode_metadata['importColors'];
                 } else {
@@ -151,6 +158,7 @@ class DashboardController extends Controller
                     $get_widget['visible_columns'] = $decode_metadata['visible_columns'] ?? $table_keys;
                 }
             }
+            
 
             //chart widgets
             elseif ($get_widget['widget_type_id'] > 1 && $get_widget['widget_type_id'] <= 4) {
@@ -192,7 +200,7 @@ class DashboardController extends Controller
 
                     $chart_types    = [2 => 'line', 3 => 'bar', 4 => 'pie', 5 => 'table'];
                     $label_location = ($get_widget['widget_type_id'] == 4) ? 'right' : 'top';
-                    $colorMap       = $this->getColorArray($get_widget['id'], $labels);
+                    $colorMap       = $this->getColorArray($get_widget['id'], $labels, $userId);
 
                     if((int)$get_widget['widget_type_id'] == 2){
                         $datasets = [[
@@ -200,7 +208,7 @@ class DashboardController extends Controller
                             "data" => $values,
                             "fill" => $decode_metadata['graphSettings']['toShade'] ?? true,
                             "pointRadius" => $decode_metadata['graphSettings']['pointSize'] ?? 0,
-                            "pointBorderColor" => $this->getColorArray($get_widget['id'], $labels) ?? '#36a2eb',
+                            "pointBorderColor" => $this->getColorArray($get_widget['id'], $labels, $userId) ?? '#36a2eb',
                             "borderWidth" => 1,
                             "backgroundColor" => ($decode_metadata['graphSettings']['shadeColor'].'80' ?? '#36a2eb80'),
                             "borderColor" => $decode_metadata['graphSettings']['lineColor'] ?? '#36a2eb',
@@ -243,13 +251,14 @@ class DashboardController extends Controller
                 $get_widget['table_headings'] = [];
                 $get_widget['table'] = [];
             }
+        
 
         }
 
         $get_widget_types = DashboardWidgetType::get();
 
         $array = [
-            'dashboard_info' => $dashboard_info[0],
+            'dashboard_info' => $dashboard_info,
             'widgets'        => $get_widgets,
             'widget_types'   => $get_widget_types,
             'all_geojsons'   => $geojson_array,
@@ -721,10 +730,11 @@ class DashboardController extends Controller
             'bounds._southWest.lng' => ['required', 'numeric'],
         ]);
 
-        $userId = Auth::id();
-        $widget = DashboardWidget::where('user_id', $userId)
-            ->where('id', $request->integer('widget_id'))
+        // This route can be called from the public share page, where Auth::id() is null.
+        // Load the widget by id first, then use the widget owner's user_id to read files/colors.
+        $widget = DashboardWidget::where('id', $request->integer('widget_id'))
             ->firstOrFail();
+        $userId = $widget->user_id;
 
         // Map widgets don't have x/y axes; only charts (2..4) are refreshable here
         if (!($widget->widget_type_id > 1 && $widget->widget_type_id <= 4)) {
@@ -737,14 +747,14 @@ class DashboardController extends Controller
         $mapFilename = $meta['map_filename'] ?? null;
 
         // don't want to link to this
-        if(($meta['mapLinkID'] != $request->map_id))
+        if((($meta['mapLinkID'] ?? 'noLink321π') != $request->map_id))
             return response()->json(['labels' => 'dont']);
 
         // if we don't have an axis
         if(!array_key_exists('norm', $meta))
             $meta['norm'] = "NOPE";
         if ($meta['norm'] == "NOPE" && (!$xAxis || !$yAxis || !$mapFilename)) {
-            return response()->json(['labels' => [], 'datasets' => ['backgroundColor' => $this->getColorArray($widget['id'], $labels)]]);
+            return response()->json(['labels' => [], 'datasets' => []]);
         }
 
         $geo = FileUpload::where('filename', $mapFilename)
@@ -787,7 +797,7 @@ class DashboardController extends Controller
                 "data" => $values,
                 "fill" => $meta['graphSettings']['toShade'] ?? true,
                 "pointRadius" => $meta['graphSettings']['pointSize'] ?? 0,
-                "pointBorderColor" => $this->getColorArray($widget['id'], $labels) ?? '#36a2eb',
+                "pointBorderColor" => $this->getColorArray($widget['id'], $labels, $userId) ?? '#36a2eb',
                 "borderWidth" => 1,
                 "backgroundColor" => ($meta['graphSettings']['shadeColor'].'80' ?? '#36a2eb80'),
                 "borderColor" => $meta['graphSettings']['lineColor'] ?? '#36a2eb',
@@ -800,7 +810,7 @@ class DashboardController extends Controller
                 'fill'  => true,
                 'pointRadius' => 0,
                 'borderWidth' => 1,
-                'backgroundColor' => $this->getColorArray($widget['id'], $labels),
+                'backgroundColor' => $this->getColorArray($widget['id'], $labels, $userId),
             ]];
         }
 
@@ -840,46 +850,71 @@ class DashboardController extends Controller
         return response()->json(['success' => true]);
     }
 
-    private function getColorArray($widgetID, $labels){
-        $widgetFile = DashboardWidget::where('user_id', Auth::id())
-            ->where('id', $widgetID)
-            ->firstOrFail();
-        $metadata = json_decode($widgetFile->metadata, true);
+    private function getColorArray($widgetID, $labels, $userId = null)
+    {
+        $query = DashboardWidget::where('id', $widgetID);
 
-        // initialize color map if there isn't one
-        if(!array_key_exists('colorMap', $metadata)){
-            $metadata['colorMap'] = array();
-            if(is_array($labels)){
-                    // default color for line graph is just the blue
-                if($widgetFile->widget_type_id == 2){
-                    $defaultColors = ['#36a2eb'];
-                }
-                else // default colors from chartjs
-                    $defaultColors = [
-                        '#36a2eb', // blue
-                        '#ff6384', // red
-                        '#ff9f40', // orange
-                        '#ffcd56', // yellow
-                        '#4bc0c0', // green
-                        '#422163', // purple omage
-                        '#c9cbcf' // grey
-                    ];
-                foreach($labels as $key)//give all the labels a 'default' color
-                    $metadata['colorMap'][$key] = $defaultColors[sizeof($metadata['colorMap']) % sizeof($defaultColors)];
-            
-                //$metadata['colorMap'][$labels[0]] = '#31220b';//testing testing
+        // In private routes, $userId is usually Auth::id(). In public share routes,
+        // $userId is the dashboard owner's id. Do not rely on Auth::id() here.
+        if ($userId !== null) {
+            $query->where('user_id', $userId);
+        } elseif (Auth::check()) {
+            $query->where('user_id', Auth::id());
+        }
+
+        $widgetFile = $query->first();
+
+        // Public/share pages should not crash with a 404 just because a color source is missing.
+        if (!$widgetFile) {
+            if (is_array($labels)) {
+                return array_fill(0, count($labels), '#999999');
             }
-            $widgetFile->metadata = json_encode($metadata);
-            $widgetFile->save();
+            return [];
+        }
+
+        $metadata = json_decode($widgetFile->metadata, true) ?: [];
+
+        // Initialize color map if there isn't one.
+        if (!array_key_exists('colorMap', $metadata) || !is_array($metadata['colorMap'])) {
+            $metadata['colorMap'] = [];
+
+            if (is_array($labels)) {
+                if ((int) $widgetFile->widget_type_id === 2) {
+                    $defaultColors = ['#36a2eb'];
+                } else {
+                    $defaultColors = [
+                        '#36a2eb',
+                        '#ff6384',
+                        '#ff9f40',
+                        '#ffcd56',
+                        '#4bc0c0',
+                        '#422163',
+                        '#c9cbcf',
+                    ];
+                }
+
+                foreach ($labels as $key) {
+                    $metadata['colorMap'][$key] = $defaultColors[count($metadata['colorMap']) % count($defaultColors)];
+                }
+            }
+
+            // Only persist generated colors when we can safely identify the owning user.
+            // This still works for public share pages because we pass the owner $userId.
+            if ($userId !== null || Auth::check()) {
+                $widgetFile->metadata = json_encode($metadata);
+                $widgetFile->save();
+            }
         }
 
         if (is_array($labels)) {
             $curatedColor = [];
-            foreach ($labels as $key) 
+            foreach ($labels as $key) {
                 $curatedColor[] = $metadata['colorMap'][$key] ?? '#999999';
+            }
             return $curatedColor;
         }
-        return $metadata['colorMap'];
+
+        return $metadata['colorMap'] ?? [];
     }
 
 /**
@@ -913,4 +948,6 @@ private function featureRepresentativePoint(array $feature): ?array
         return $lat >= $south && $lat <= $north && $lng >= $west && $lng <= $east;
     }
 }
+
+
 

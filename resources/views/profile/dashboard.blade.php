@@ -1,4 +1,4 @@
-@extends(($isOwner ?? false) ? 'layouts.app' : 'layouts.public-dashboard')
+@extends('layouts.app')
 
 @section('title', $dashboard_info['name'])
 
