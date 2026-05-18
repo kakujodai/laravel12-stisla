@@ -77,6 +77,28 @@
                                             ?>
                                         </select>
                                     </div>
+                                    <br>
+                                    <label for="legend_property">Select the property to use for legend labels</label>
+                                    <select class="form-control mb-2" id="legend_property" name="legend_property">
+                                        <option value="EnabledΣπ">-- auto detect --</option>
+                                    </select>
+
+                                    <div id="map_popup_group" class="form-group" style="display:none;">
+                                        <label for="map_tooltip">Select which properties to show on popups</label>
+                                        <select id="map_tooltip" name="map_tooltip[]" class="form-control mb-2" multiple style="width:100%;">
+                                        </select>
+                                        <label for="map_popup_event">Popup trigger</label>
+                                        <select id="map_popup_event" name="popup_event" class="form-control mb-2">
+                                            <option value="click">On click</option>
+                                            <option value="hover">On hover</option>
+                                            <option value="both">On click + hover</option>
+                                        </select>
+
+                                        <div id="popup_template_group" style="display:none;">
+                                            <label for="popup_template">Or provide a custom popup template</label>
+                                            <textarea id="map_popup" name="popup_template" class="form-control mb-2" rows="4" placeholder="Use html and placeholders like {property_name} to inject feature properties."></textarea>
+                                        </div>
+                                    </div>
                                     <br><button class="btn btn-warning" type="submit">Save and Exit</button>
                                 </div>
                             </form>
@@ -185,6 +207,135 @@
         else
             $('#geoWarning').hide('slow');
         
+    });
+</script>
+<script src="https://unpkg.com/dompurify@2.4.0/dist/purify.min.js"></script>
+
+<script>
+    // Popup sanitization helpers (copied from add-widgets)
+    function escapeHtml(str) {
+        return $('<div>').text(str == null ? '' : String(str)).html();
+    }
+
+    function buildSafePopupHtml(template, properties) {
+        const allowedTags = ['b','i','strong','em','br','p','ul','ol','li','a','span','div'];
+        const allowedAttrs = ['href','title','target'];
+        const cfg = {
+            ALLOWED_TAGS: allowedTags,
+            ALLOWED_ATTR: allowedAttrs,
+            FORBID_ATTR: ['style', 'onclick', 'onerror', 'onload']
+        };
+
+        const safeTemplate = DOMPurify.sanitize(template || '', cfg);
+
+        const substituted = safeTemplate.replace(/\{([^}]+)\}/g, function(_, key) {
+            const val = properties && properties[key] != null ? properties[key] : '';
+            return escapeHtml(String(val));
+        });
+
+        return DOMPurify.sanitize(substituted, cfg);
+    }
+
+    // Populate legend choices from the geojson metadata
+    function update_legend_select(filename) {
+        $.post('/profile/get-file-metadata', { filename }).done(function (response) {
+            try {
+                const $sel = $('#legend_property');
+                const current = $sel.val() || '';
+
+                $sel.empty();
+                $sel.append($('<option>').val('EnabledΣπ').text('Disabled'));
+
+                const cols = Array.isArray(response && response.table_columns) ? response.table_columns : [];
+                $.each(cols, function(_, value) { $sel.append($('<option>').val(value).text(value)); });
+
+                if (current && $sel.find(`option[value="${current}"]`).length) {
+                    $sel.val(current);
+                } else if (!current) {
+                    $sel.val('EnabledΣπ');
+                }
+                $sel.trigger('change');
+            } catch (err) {
+                console.error('update_legend_select error:', err);
+            }
+        }).fail(function (jqXHR, textStatus, errorThrown) {
+            console.error('Failed to fetch file metadata for legend:', textStatus, errorThrown);
+        });
+    }
+
+    // Populate popup options and toggle custom template UI
+    function update_popup_select(filename) {
+        $.post('/profile/get-file-metadata', { filename }).done(function (response) {
+            const $sel = $('#map_tooltip');
+            const current = $sel.val() || [];
+
+            $sel.empty();
+            $sel.append('<option value="ALL_PROPERTIES">All properties</option>');
+
+            $.each(response.table_columns || [], function(_, value) {
+                $sel.append(`<option value="${value}">${value}</option>`);
+            });
+
+            $sel.append('<option value="custom">Custom popup...</option>');
+
+            if (Array.isArray(current) && current.length) {
+                $sel.val(current);
+            } else if (current) {
+                $sel.val([current]);
+            } else {
+                $sel.val([]);
+            }
+            $sel.trigger('change');
+        });
+    }
+
+    $(function () {
+        $.ajaxSetup({
+            headers: { 'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content') }
+        });
+        // initialize popup selector
+        $('#map_tooltip').select2({
+            placeholder: 'Select popup properties',
+            closeOnSelect: false,
+            allowClear: true,
+            width: '100%'
+        });
+
+        // read current values from server-side metadata
+        const mapFilename = @json($metadata['map_filename'] ?? '');
+        const initialLegend = @json($metadata['legend']['property'] ?? $metadata['legend_property'] ?? '');
+        const initialTooltip = @json($metadata['map_tooltip'] ?? []);
+        const initialPopupTemplate = @json($metadata['popup_template'] ?? '');
+        const initialPopupEvent = @json($metadata['popup_event'] ?? 'click');
+
+        console.log('edit-widgets init', { mapFilename, initialLegend, initialTooltip, initialPopupTemplate, initialPopupEvent });
+        // set initial values (so update_* functions can preserve selections)
+        if (initialLegend) $('#legend_property').val(initialLegend);
+        if (Array.isArray(initialTooltip) && initialTooltip.length) $('#map_tooltip').val(initialTooltip);
+        if (initialPopupTemplate) $('#map_popup').val(initialPopupTemplate);
+        if (initialPopupEvent) $('#map_popup_event').val(initialPopupEvent);
+
+        if (mapFilename) {
+            const filenameBase = mapFilename.replace(/^.*[\\/]/, '');
+            update_legend_select(filenameBase);
+            update_popup_select(filenameBase);
+            $('#map_popup_group').show(0);
+        }
+
+        // show/hide custom template area when 'custom' selected or template present
+        $('#map_tooltip').on('change', function () {
+            const val = $(this).val() || [];
+            if (Array.isArray(val) ? val.indexOf('custom') !== -1 : val === 'custom') {
+                $('#popup_template_group').show('slow');
+            } else {
+                $('#popup_template_group').hide('slow');
+            }
+        });
+
+        // If a template already exists, ensure the template area is visible
+        if (initialPopupTemplate && initialPopupTemplate.length) {
+            $('#popup_template_group').show(0);
+        }
     });
 </script>
 @endpush
