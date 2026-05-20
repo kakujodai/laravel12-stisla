@@ -187,12 +187,14 @@
                 try {
                     const response = await fetch(url);
                     if (!response.ok) {
+                        const body = await response.text().catch(()=>null);
+                        console.error('getJsonFromServer -> non-ok response', response.status, 'for', url, body);
                         throw new Error(`HTTP error! status: ${response.status}`);
                     }
                     const jsonData = await response.json();
                     return jsonData;
                 } catch (error) {
-                    console.error("Error fetching JSON:", error);
+                    console.error("Error fetching JSON:", error, url);
                     return null;
                 }
             }
@@ -387,20 +389,42 @@
                                     '#c9cbcf'
                                 ];
 
+                                // Deterministic color selection for a feature's label to match legend
+                                function colorForFeature{{ $widget['random_id'] }}(feature) {
+                                    const props = feature && feature.properties ? feature.properties : {};
+                                    const meta = propertiesMeta{{ $widget['random_id'] }} || {};
+                                    const cmap = meta?.colorMap || @json($widget['colorMap']) || {};
+                                    const legendField = meta?.legend?.property || meta?.colorKey || null;
+                                    const palette = defaultLegendPalette{{ $widget['random_id'] }};
+
+                                    const label = (legendField && props[legendField] !== undefined && props[legendField] !== null && props[legendField] !== '')
+                                        ? String(props[legendField])
+                                        : 'Unknown';
+
+                                    if (meta?.importColors == 1 && props.color) return props.color;
+                                    if (cmap && cmap[label]) return cmap[label];
+
+                                    // simple hash to pick consistent palette entry per label
+                                    let h = 0; for (let i = 0; i < label.length; i++) { h = ((h << 5) - h) + label.charCodeAt(i); h |= 0; }
+                                    return palette[Math.abs(h) % palette.length];
+                                }
+
                                 function createCircleMarker(feature, latlng) {
-                                    var thecolor;
-                                    switch(parseInt({{$widget['importColor']+0}}, 10)){
+                                    const mode = parseInt(propertiesMeta{{ $widget['random_id'] }}?.importColors ?? {{$widget['importColor']+0}}, 10);
+                                    let thecolor;
+                                    switch(mode){
                                         case 0:
                                             thecolor = '#3388ff';
                                             break;
                                         case 1:
-                                            thecolor = (feature.properties.color || '#990099');
+                                            thecolor = (feature.properties && feature.properties.color) || '#990099';
                                             break;
                                         case 2:
-                                            thecolor = ('#990000'); // temp in place!
-                                            break;
                                         case 3:
-                                            thecolor = ('#000099');
+                                            thecolor = colorForFeature{{ $widget['random_id'] }}(feature);
+                                            break;
+                                        default:
+                                            thecolor = '#3388ff';
                                     }
                                     return L.circleMarker(latlng, {
                                         radius: 3,
@@ -473,8 +497,14 @@
                                         if ((importColor==1) && f.properties && f.properties.color) {
                                             labelToColor[label] = f.properties.color;
                                         } else if (importColor == 2 || importColor == 3){
-                                            labelToColor[label] = colorMap[label] || defaultLegendPalette{{ $widget['random_id'] }}[paletteIndex % defaultLegendPalette{{ $widget['random_id'] }}.length];
-                                            paletteIndex += 1;
+                                            // Use the same deterministic color comp as markers so legend matches
+                                            // Create a minimal feature object with the label in the legendField if available
+                                            const fakeFeature = { properties: {} };
+                                            const legendFieldLocal = getLegendField(features, propertiesMeta) || null;
+                                            if (legendFieldLocal) {
+                                                fakeFeature.properties[legendFieldLocal] = label;
+                                            }
+                                            labelToColor[label] = colorForFeature{{ $widget['random_id'] }}(fakeFeature);
                                         }
                                     });
 
@@ -515,20 +545,20 @@
                                         pointToLayer: createCircleMarker,
                                         style: function (feature) {
                                             var theColor;
-                                            switch({{$widget['importColor']+0}}){
-                                                case 0:
-                                                    theColor = '#3388ff';
-                                                    break;
-                                                case 1: 
-                                                    theColor = (feature.properties.color || '#990099');
-                                                    break;
-                                                case 2:
-                                                    theColor = '#AAAAAA'; // doesn't matter? nice!
-                                                    break;
-                                                case 3:
-                                                    const colorMap = @json($widget['colorMap']);
-                                                    theColor = colorMap[feature.properties["{{$widget['colorKey']}}"]];
-                                            }
+                                            switch(parseInt(propertiesMeta{{ $widget['random_id'] }}?.importColors ?? {{$widget['importColor']+0}}, 10)){
+                                                    case 0:
+                                                        theColor = '#3388ff';
+                                                        break;
+                                                    case 1:
+                                                        theColor = (feature.properties && feature.properties.color) || '#990099';
+                                                        break;
+                                                    case 2:
+                                                    case 3:
+                                                        theColor = colorForFeature{{ $widget['random_id'] }}(feature);
+                                                        break;
+                                                    default:
+                                                        theColor = '#3388ff';
+                                                }
                                             return {
                                                 color: theColor,
                                                 fillColor: theColor,
@@ -553,16 +583,36 @@
 
                                 overlayMaps{{ $widget['random_id'] }}.{{ pathinfo($widget['filename'], PATHINFO_FILENAME) }} = {{ pathinfo($widget['filename'], PATHINFO_FILENAME) }}{{ $widget['random_id'] }};
 
-                                var map{{ $widget['random_id'] }} = L.map('{{ $widget['random_id'] }}', {
-                                    center: [0,0],
-                                    zoom: 14,
-                                    layers: [osm, {{ str_replace('-', '', pathinfo($widget['filename'], PATHINFO_FILENAME)) }}{{ $widget['random_id'] }}]
-                                });
+                                var map{{ $widget['random_id'] }};
+                                try {
+                                    const el = document.getElementById('{{ $widget['random_id'] }}');
+                                    if (el) el.getBoundingClientRect();
+                                    map{{ $widget['random_id'] }} = L.map('{{ $widget['random_id'] }}', {
+                                        center: [0,0],
+                                        zoom: 14,
+                                        layers: [osm, {{ str_replace('-', '', pathinfo($widget['filename'], PATHINFO_FILENAME)) }}{{ $widget['random_id'] }}]
+                                    });
+                                } catch (mapErr) {
+                                    console.error('failed to create map for', '{{ $widget['random_id'] }}', mapErr);
+                                }
                                 window.LinkedMaps = window.LinkedMaps || {};
                                 window.LinkedMaps['{{ $widget['id'] }}'] = {
                                     map: map{{ $widget['random_id'] }},
                                     layer: {{ pathinfo($widget['filename'], PATHINFO_FILENAME) }}{{ $widget['random_id'] }}
                                 };
+
+                                // Preload GeoJSON for all overlays so layers contain features immediately
+                                Object.keys(overlayMaps{{ $widget['random_id'] }}).forEach(function(name){
+                                    getJsonFromServer('/profile/get-geojson/' + name)
+                                        .then(function(data){
+                                            if (!data) return;
+                                            try {
+                                                overlayMaps{{ $widget['random_id'] }}[name].addData(data);
+                                            } catch (err) {
+                                                console.error('preload overlay addData error for', name, err);
+                                            }
+                                        });
+                                });
 
                                 //Legend Control Section
                                 var legend{{ $widget['random_id'] }} = L.control({ position: 'bottomright' });
@@ -714,7 +764,7 @@
                                             : 'Unknown';
 
                                         let color = '#AA00AA'; // fails and we'll see!
-                                        switch({{$widget['importColor']+0}}){
+                                        switch(parseInt(propertiesMeta{{ $widget['random_id'] }}?.importColors ?? {{$widget['importColor']+0}}, 10)){
                                             case 0:
                                                 color = '#3388ff';
                                                 break;
@@ -727,8 +777,8 @@
                                                 || defaultLegendPalette{{ $widget['random_id'] }}[0];
                                                 break;
                                             case 3:
-                                                const colorMap = @json($widget['colorMap']);
-                                                color = colorMap[props["{{$widget['colorKey']}}"]];                                                
+                                                const colorMap = propertiesMeta{{ $widget['random_id'] }}?.colorMap || @json($widget['colorMap']);
+                                                color = colorMap[props["{{$widget['colorKey']}}"]] || labelToColor[label] || defaultLegendPalette{{ $widget['random_id'] }}[0];                                                
                                         }
                                         if (layer.setStyle) {
                                             layer.setStyle({
@@ -773,7 +823,7 @@
                                     getJsonFromServer(`/profile/get-geojson/${full_name}`)
                                         .then(data => {
                                             if (data) {
-                                                overlayMaps{{ $widget['random_id'] }}[full_name].addData(data);
+                                                    overlayMaps{{ $widget['random_id'] }}[full_name].addData(data);
                                                 overlayMaps{{ $widget['random_id'] }}[full_name].eachLayer(function (layer) {
                                                     if (!layer.feature)
                                                         return;

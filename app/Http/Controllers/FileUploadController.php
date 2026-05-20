@@ -258,5 +258,57 @@ private function convertAndSaveLayers(string $gdal_path, string $filePath, strin
 
         return redirect()->route('profile.upload')->with('success', 'File deleted successfully.');
     }
+
+    public function rename_file(Request $request)
+    {
+        $request->validate([
+            'old_filename' => ['required', 'string'],
+            'new_filename' => ['required', 'string', 'max:255'],
+        ]);
+
+        $userId = Auth::id();
+        $old = $request->input('old_filename');
+        $newInput = $request->input('new_filename');
+
+        // sanitize new base name and preserve original extension
+        $oldExt = strtolower(pathinfo($old, PATHINFO_EXTENSION));
+        $newBase = pathinfo($newInput, PATHINFO_FILENAME);
+        $newBase = preg_replace('/[^A-Za-z0-9\_\-]/', '', $newBase);
+        if ($newBase === '') {
+            return back()->with('error', 'Invalid new filename.');
+        }
+
+        $new = $newBase . '.' . $oldExt;
+
+        // ensure target doesn't already exist for this user
+        $exists = FileUpload::where('user_id', $userId)->where('filename', $new)->exists();
+        if ($exists) {
+            return back()->with('error', 'A file with that name already exists.');
+        }
+
+        $oldPath = "users/{$userId}/{$old}";
+        $newPath = "users/{$userId}/{$new}";
+
+        if (!Storage::exists($oldPath)) {
+            return back()->with('error', 'Original file not found.');
+        }
+
+        // Attempt to move the stored file
+        if (!Storage::move($oldPath, $newPath)) {
+            return back()->with('error', 'Failed to rename the stored file.');
+        }
+
+        // Update DB record
+        $updated = FileUpload::where('user_id', $userId)->where('filename', $old)
+            ->update(['filename' => $new]);
+
+        if (!$updated) {
+            // rollback storage move if DB update failed
+            Storage::move($newPath, $oldPath);
+            return back()->with('error', 'Failed to update database record.');
+        }
+
+        return redirect()->route('profile.upload')->with('success', 'File renamed successfully.');
+    }
 }
 

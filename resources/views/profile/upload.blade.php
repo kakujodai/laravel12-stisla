@@ -22,13 +22,18 @@
                                     <td>{{$file['title']}}</td>
                                     <td>{{$file['filename']}}</td>
                                     <td>
-                                            <form action="{{ route('profile.delete-upload') }}" method="POST" onsubmit="return confirm('Delete this file?');">
-                                            @csrf
-                                            <input type="hidden" name="filename" value="{{$file['filename']}}">
-                                            <button type="submit" class="btn btn-danger rounded-sm">
-                                                <i class="fas fa-trash" aria-hidden="true"></i>
+                                        <div class="d-inline-flex align-items-center">
+                                            <form class="d-inline-block me-1" action="{{ route('profile.delete-upload') }}" method="POST" onsubmit="return confirm('Delete this file?');">
+                                                @csrf
+                                                <input type="hidden" name="filename" value="{{$file['filename']}}">
+                                                <button type="submit" class="btn btn-danger btn-sm rounded-sm">
+                                                    <i class="fas fa-trash" aria-hidden="true"></i>
+                                                </button>
+                                            </form>
+                                            <button class="btn btn-secondary btn-sm rounded-sm" onclick="renameFilePrompt('{{$file['filename']}}')" title="Rename">
+                                                <i class="fas fa-edit" aria-hidden="true"></i>
                                             </button>
-                                        </form>
+                                        </div>
                                     </td>
                                 </tr>
                                 @endforeach
@@ -84,5 +89,20 @@
     document.addEventListener("DOMContentLoaded", function() {
         new DataTable('#uploads_table');
     });
+    function renameFilePrompt(oldFilename) {
+        // ask user for new base name (extension will be preserved)
+        const base = prompt('Enter new filename (without extension):', oldFilename.replace(/\.[^/.]+$/, ''));
+        if (!base) return;
+        const form = document.getElementById('renameForm');
+        document.getElementById('old_filename').value = oldFilename;
+        document.getElementById('new_filename').value = base;
+        form.submit();
+    }
 </script>
+
+<form id="renameForm" action="{{ route('profile.rename-upload') }}" method="POST" style="display:none;">
+    @csrf
+    <input type="hidden" name="old_filename" id="old_filename">
+    <input type="hidden" name="new_filename" id="new_filename">
+</form>
 @endsection
