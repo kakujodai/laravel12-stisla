@@ -14,6 +14,11 @@ Tech Stack
 -------------
 - Laravel + Blade, Composer, Node.js, HTML, CSS, PHP, SQLite (or other database service), Javascript, Typescript, Leaflet, Select2, React, Excalidraw, Git
 
+**Contacts:**
+------------------------
+ Dr. Jing has the repo and should have our group's most up to date contact information. Link for repo for project: https://github.com/kakujodai/laravel12-stisla
+Just in case though, Layla Phipps(Graduating, lphipps2@gulls.salisbury.edu), Emilee Breckenridge (ebreckenridge1@gulls.salisbury.edu), Thaddeus Versteegen (Graduating, tversteegen1@gulls.salisbury.edu), Connor Dailey(cdailey1@gulls.salisbury.edu) worked on the project for the 2025-6 school year.
+See original template contributors in [README.MD](README.MD).
 
 Quick Setup (Local)
 -------------------
@@ -141,10 +146,8 @@ Dashboard & Authentication
 - Authentication uses Laravel Breeze; relevant routes and views are in `routes/web.php` and `resources/views/auth` (or Breeze default structure).
 - Dashboard-related logic is grouped in `app/Models/*` and corresponding controllers under `app/Http/Controllers`.
 
-Handoff Checklist
+**Outstanding Issues:**
 -----------------
-
-- **Outstanding Issues:**
 Multi-Language Support
 Website palette changer
 Refinement of drag-and-drop logic and implemented features
@@ -160,9 +163,6 @@ Export to Dr. Lembo for hosting
 Making the program an executable?
 Book mark instances of widgets?
 
-- **Contacts:** Dr. Jing has the repo and should have our group's most up to date contact information. Link for repo for project: https://github.com/kakujodai/laravel12-stisla
-Just in case though, Layla Phipps(Graduating, lphipps2@gulls.salisbury.edu), Emilee Breckenridge (ebreckenridge1@gulls.salisbury.edu), Thaddeus Versteegen (Graduating, tversteegen1@gulls.salisbury.edu), Connor Dailey(cdailey1@gulls.salisbury.edu) worked on the project for the 2025-6 school year.
-See original template contributors in [README.MD](README.MD).
 
 Appendix — Useful Commands
 -------------------------
