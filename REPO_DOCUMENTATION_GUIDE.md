@@ -89,6 +89,7 @@ Key files and locations
 - Composer manifest: [composer.json](composer.json)
 - Node manifest: [package.json](package.json)
 - README and project intro: [README.MD](README.MD)
+- MetaData for files: Stored in Dashboard Controller
 
 Development Workflow
 --------------------
@@ -159,7 +160,9 @@ Export to Dr. Lembo for hosting
 Making the program an executable?
 Book mark instances of widgets?
 
-- **Contacts:** Dr. Jing has the repo and should have our group's contact information. Just in case though, Layla Phipps(Graduating, lphipps2@gulls.salisbury.edu), Emilee Breckenridge (ebreckenridge1@gulls.salisbury.edu), Thaddeus Versteegen (Graduating, tversteegen1@gulls.salisbury.edu), Connor Dailey(cdailey1@gulls.salisbury.edu) worked on the project for the 2025-6 school year. See original template contributors in [README.MD](README.MD).
+- **Contacts:** Dr. Jing has the repo and should have our group's most up to date contact information. Link for repo for project: https://github.com/kakujodai/laravel12-stisla
+Just in case though, Layla Phipps(Graduating, lphipps2@gulls.salisbury.edu), Emilee Breckenridge (ebreckenridge1@gulls.salisbury.edu), Thaddeus Versteegen (Graduating, tversteegen1@gulls.salisbury.edu), Connor Dailey(cdailey1@gulls.salisbury.edu) worked on the project for the 2025-6 school year.
+See original template contributors in [README.MD](README.MD).
 
 Appendix — Useful Commands
 -------------------------
@@ -169,4 +172,5 @@ Appendix — Useful Commands
 - Build prod assets: `npm run build`
 - Run migrations: `php artisan migrate`
 - Run tests: `php artisan test`
+
 
