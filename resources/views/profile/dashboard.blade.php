@@ -389,7 +389,7 @@
 
                                 function createCircleMarker(feature, latlng) {
                                     var thecolor;
-                                    switch(Integer({{$widget['importColor']+0}})){
+                                    switch(parseInt({{$widget['importColor']+0}}, 10)){
                                         case 0:
                                             thecolor = '#3388ff';
                                             break;
@@ -508,8 +508,10 @@
                                 }
 
 
+                                const mapData{{ $widget['random_id'] }} = @json(json_decode($widget['map_json'] ?? '', true) ?: ['type' => 'FeatureCollection', 'features' => []]);
+
                                 var {{ pathinfo($widget['filename'], PATHINFO_FILENAME) }}{{ $widget['random_id'] }} =
-                                    new L.GeoJSON.AJAX("{{ route('profile.get-geojson', ['filename' => pathinfo($widget['filename'], PATHINFO_FILENAME)]) }}", {
+                                    L.geoJSON(mapData{{ $widget['random_id'] }}, {
                                         pointToLayer: createCircleMarker,
                                         style: function (feature) {
                                             var theColor;
@@ -577,16 +579,51 @@
 
                                 const viewKey{{ $widget['random_id'] }} = 'mapview:dash{{ $dashboard_info["id"] }}:widget{{ $widget["id"] }}';
 
+                                let mapReadyToSave{{ $widget['random_id'] }} = false;
+
                                 function saveMapView{{ $widget['random_id'] }}() {
+                                    if (!mapReadyToSave{{ $widget['random_id'] }}) return;
+
                                     const c = map{{ $widget['random_id'] }}.getCenter();
                                     const z = map{{ $widget['random_id'] }}.getZoom();
-                                    localStorage.setItem(viewKey{{ $widget['random_id'] }}, JSON.stringify({ lat: c.lat, lng: c.lng, zoom: z }));
+
+                                    // Never save broken startup views like [0,0]
+                                    if (Math.abs(c.lat) < 0.000001 && Math.abs(c.lng) < 0.000001) {
+                                        return;
+                                    }
+
+                                    localStorage.setItem(
+                                        viewKey{{ $widget['random_id'] }},
+                                        JSON.stringify({
+                                            lat: c.lat,
+                                            lng: c.lng,
+                                            zoom: z
+                                        })
+                                    );
                                 }
 
                                 function restoreMapView{{ $widget['random_id'] }}() {
                                     const raw = localStorage.getItem(viewKey{{ $widget['random_id'] }});
                                     if (!raw) return null;
                                     try { return JSON.parse(raw); } catch { return null; }
+                                }
+
+                                function isUsableSavedView{{ $widget['random_id'] }}(view, bounds) {
+                                    if (!view || !Number.isFinite(view.lat) || !Number.isFinite(view.lng) || !Number.isFinite(view.zoom)) {
+                                        return false;
+                                    }
+
+                                    // If a previous broken load saved the default [0,0] view, ignore it.
+                                    if (Math.abs(view.lat) < 0.000001 && Math.abs(view.lng) < 0.000001) {
+                                        return false;
+                                    }
+
+                                    // If we have real layer bounds, only restore saved views that are actually near the data.
+                                    if (bounds && bounds.isValid && bounds.isValid()) {
+                                        return bounds.pad(0.5).contains(L.latLng(view.lat, view.lng));
+                                    }
+
+                                    return true;
                                 }
 
                                 function broadcastBBox() {
@@ -613,12 +650,20 @@
                                     var bounds = {{ pathinfo($widget['filename'], PATHINFO_FILENAME) }}{{ $widget['random_id'] }}.getBounds();
 
                                     const v = restoreMapView{{ $widget['random_id'] }}();
-                                    if (v && Number.isFinite(v.lat) && Number.isFinite(v.lng) && Number.isFinite(v.zoom)) {
+                                    if (isUsableSavedView{{ $widget['random_id'] }}(v, bounds)) {
                                         map{{ $widget['random_id'] }}.setView([v.lat, v.lng], v.zoom);
+                                    } else if (bounds && bounds.isValid && bounds.isValid()) {
+                                        map{{ $widget['random_id'] }}.fitBounds(bounds.pad(0.1));
                                     } else {
-                                        map{{ $widget['random_id'] }}.fitBounds(bounds);
-                                        saveMapView{{ $widget['random_id'] }}();
+                                        // fallback only if absolutely no valid geometry exists
+                                        map{{ $widget['random_id'] }}.setView([38.3607, -75.5994], 7);
                                     }
+
+                                    setTimeout(function () {
+                                        map{{ $widget['random_id'] }}.invalidateSize();
+                                        mapReadyToSave{{ $widget['random_id'] }} = true;
+                                        saveMapView{{ $widget['random_id'] }}();
+                                    }, 300);
 
                                     {{ pathinfo($widget['filename'], PATHINFO_FILENAME) }}{{ $widget['random_id'] }}.eachLayer(function (layer) {
                                         if (!layer.feature)
@@ -650,8 +695,11 @@
 
                                     const legendHtml = renderLegend(legendResult);
 
-                                    // Target this map's legend specifically
-                                    document.querySelector(".legend-{{ $widget['random_id'] }}").innerHTML = legendHtml;
+                                    // Target this map's legend specifically, if the legend control is enabled.
+                                    const legendEl{{ $widget['random_id'] }} = document.querySelector(".legend-{{ $widget['random_id'] }}");
+                                    if (legendEl{{ $widget['random_id'] }}) {
+                                        legendEl{{ $widget['random_id'] }}.innerHTML = legendHtml;
+                                    }
 
                                     // Apply the same colors to map layers so geometry matches legend
                                     const labelToColor = legendResult.labelToColor || {};
@@ -696,6 +744,13 @@
                                     broadcastBBox();
                                     mapDataLoaded{{ $widget['random_id'] }} = true;
                                 });
+
+                                // This layer is loaded from server-rendered GeoJSON, not Leaflet AJAX.
+                                // Fire the same event the old AJAX loader used so the existing fitBounds,
+                                // legend, popups, and linked chart logic all run.
+                                setTimeout(function () {
+                                    {{ pathinfo($widget['filename'], PATHINFO_FILENAME) }}{{ $widget['random_id'] }}.fire('data:loaded');
+                                }, 0);
 
                                 const resizeObserver{{ $widget['random_id'] }} = new ResizeObserver(() => {
                                     map{{ $widget['random_id'] }}.invalidateSize();

@@ -84,7 +84,16 @@ class DashboardController extends Controller
 
                 if ($get_map_filename) {
                     $path = "users/{$userId}/{$get_map_filename}";
-                    $get_widget['map_json'] = Storage::exists($path) ? Storage::get($path) : null;
+
+                    if (Storage::exists($path)) {
+                        $get_widget['map_json'] = Storage::get($path);
+                    } else {
+                        // Fallback for older uploads that were stored in the database instead of storage/app.
+                        $get_widget['map_json'] = FileUpload::where('user_id', $userId)
+                            ->where('filename', $get_map_filename)
+                            ->value('geojson');
+                    }
+
                     $get_widget['filename'] = preg_replace('/[^A-Za-z0-9\_\.]/', '', basename($get_map_filename));
                 }
 
@@ -704,12 +713,27 @@ class DashboardController extends Controller
     public function get_geojson($filename) {
         ini_set('memory_limit', -1);
         ob_start('ob_gzhandler');
-        $real_filename = $filename . ".geojson";
-        $geojson = FileUpload::where('filename', $real_filename)
-            ->where('user_id', Auth::id())
-            ->value('geojson');
 
-        return response()->json(json_decode($geojson, true))
+        $userId = Auth::id();
+        abort_unless($userId, 403);
+
+        $real_filename = $filename . ".geojson";
+        $path = "users/{$userId}/{$real_filename}";
+
+        if (Storage::exists($path)) {
+            $geojson = Storage::get($path);
+        } else {
+            $geojson = FileUpload::where('filename', $real_filename)
+                ->where('user_id', $userId)
+                ->value('geojson');
+        }
+
+        $decoded = json_decode($geojson ?? '', true);
+        if (!is_array($decoded)) {
+            $decoded = ['type' => 'FeatureCollection', 'features' => []];
+        }
+
+        return response()->json($decoded)
             ->header('Cache-Control', 'max-age=3600, public');
     }
 
@@ -948,6 +972,10 @@ private function featureRepresentativePoint(array $feature): ?array
         return $lat >= $south && $lat <= $north && $lng >= $west && $lng <= $east;
     }
 }
+
+
+
+
 
 
 
